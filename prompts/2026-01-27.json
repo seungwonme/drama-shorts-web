@@ -218,5 +218,35 @@
     "time": "07:32:59",
     "user": "seungwonan",
     "prompt": "이제 infra/provision_aws.sh 이부분은 문제 없는 거 맞지 ?"
+  },
+  {
+    "time": "07:37:20",
+    "user": "seungwonan",
+    "prompt": "sh infra/provision_aws.sh                                           9s 07:34:13 오전\n=== drama-shorts AWS 인프라 프로비저닝 ===\n[0/8] 사전 검증...\n✓ 기본 VPC 확인: vpc-07ddff7c0517fccdc\n  최신 Ubuntu AMI 조회 중...\n✓ Ubuntu 24.04 AMI: ami-0130d8d35bcd2d433\n[1/8] 키 페어 생성...\n✓ 키 페어 생성: drama-shorts-key.pem\n[2/8] 보안 그룹 생성...\n✓ 보안 그룹 생성: sg-0ff272b5ab9d6a16b\n[3/8] S3 버킷 생성...\n✓ S3 버킷 생성: drama-shorts-media-398808282319\n[4/8] IAM Role 생성...\n  Instance Profile 준비 대기 중...\n✓ IAM Role 생성: drama-shorts-ec2-role\n[5/8] EC2 인스턴스 생성...\n✓ 인스턴스 생성 중: i-081882281b81edf78\n✓ 인스턴스 실행 완료\n[6/8] Elastic IP 할당...\n\nAn error occurred (AddressLimitExceeded) when calling the AllocateAddress operation: The maximum number of addresses has been reached.\n\n뭔에러야? \n\n추가로 '/Users/seungwonan/Dev/1-project/drama-shorts-web/보안그룹' 이거 다 중간중간에 출력된 내용들인데 얘네들 전부 로그 파일 혹은 그냥 파일로 기록하면 좋을 거 같아"
+  },
+  {
+    "time": "07:38:25",
+    "user": "seungwonan",
+    "prompt": "왜 지워"
+  },
+  {
+    "time": "07:39:50",
+    "user": "seungwonan",
+    "prompt": "AddressLimitExceeded: AWS 계정의 Elastic IP 할당 한도(리전당 기본 5개)에 도달함.  \n\n1. Elastic IP는 인스턴스가 꺼졌다 켜질 시 IP가 동적으로 변경되기에 필수적\n2. Elastic IP로 IP를 고정 가능, 인스턴스와 1:1 매핑으로 사용\n\n내 설명이 맞아?\n내 설명이 맞다면 인스턴스는 무제한인데 왜 Elastic IP만 5개 제한일까?"
+  },
+  {
+    "time": "07:41:16",
+    "user": "seungwonan",
+    "prompt": "   aws ec2 describe-addresses --region ap-northeast-2 --query 'Addresses[?InstanceId==`null`].[PublicIp,AllocationId]' --output table  \n~/Dev/1-project/drama-shorts-web main* ❯            \n\n없어 \n이런경우 어떻게 하지?"
+  },
+  {
+    "time": "07:44:20",
+    "user": "seungwonan",
+    "prompt": "증가 요청 보냈고 일단 3번으로 하자 "
+  },
+  {
+    "time": "07:46:28",
+    "user": "seungwonan",
+    "prompt": "15.164.162.186"
   }
 ]

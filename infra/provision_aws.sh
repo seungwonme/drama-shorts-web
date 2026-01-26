@@ -10,7 +10,19 @@ REGION="ap-northeast-2"  # 서울
 INSTANCE_TYPE="t3.micro"
 ENVIRONMENT="production"
 
+# 로그 파일 설정
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="${SCRIPT_DIR}/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="${LOG_DIR}/provision_$(date '+%Y%m%d_%H%M%S').log"
+
+# 모든 출력을 터미널과 로그 파일에 동시 기록
+exec > >(tee -a "$LOG_FILE") 2>&1
+
 echo "=== $PROJECT_NAME AWS 인프라 프로비저닝 ==="
+echo "로그 파일: $LOG_FILE"
+echo "시작 시간: $(date '+%Y-%m-%d %H:%M:%S')"
+echo ""
 
 # 0. 사전 검증
 echo "[0/8] 사전 검증..."
@@ -340,3 +352,6 @@ echo ""
 echo "DNS 설정:"
 echo "- A 레코드: drama.buuup.kr → $ELASTIC_IP (Proxied)"
 echo "========================================"
+echo ""
+echo "완료 시간: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "로그 파일: $LOG_FILE"

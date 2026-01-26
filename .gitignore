@@ -222,3 +222,4 @@ changes.txt
 
 # other
 repomix-output.xml
+*.pem
