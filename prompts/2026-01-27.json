@@ -1,0 +1,32 @@
+[
+  {
+    "time": "04:30:24",
+    "user": "seungwonan",
+    "prompt": "django admin page를 만들기 위한 최소한의 패키지 뭐가 있을까\n\n1. context7 mcp를 사용한 공식문서 검색\n2. 2026년 기준으로 검색\n하여 모범사례 기반으로 답변해줘"
+  },
+  {
+    "time": "04:33:57",
+    "user": "seungwonan",
+    "prompt": "선택적 추가 패키지도 좋다\n\nREADME에 절차 적고 그대로 수행해줘"
+  },
+  {
+    "time": "04:39:05",
+    "user": "seungwonan",
+    "prompt": "어드민 ID PW 뭐지 ?"
+  },
+  {
+    "time": "04:41:48",
+    "user": "seungwonan",
+    "prompt": "만드는 스크립트 scripts/ 폴더에 만들어줘 .env에 있는 내용 바탕으로"
+  },
+  {
+    "time": "04:43:40",
+    "user": "seungwonan",
+    "prompt": "했어\n\nREADME에 기록 "
+  },
+  {
+    "time": "04:46:38",
+    "user": "seungwonan",
+    "prompt": "커밋 메시지 만들어줘"
+  }
+]
