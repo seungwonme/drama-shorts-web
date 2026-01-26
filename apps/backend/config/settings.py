@@ -171,3 +171,81 @@ if AWS_STORAGE_BUCKET_NAME:
         },
     }
     MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
+
+# Jazzmin Admin UI 설정
+JAZZMIN_SETTINGS = {
+    # 사이트 기본 설정
+    "site_title": "Drama Shorts Admin",
+    "site_header": "Drama Shorts",
+    "site_brand": "Drama Shorts",
+    "site_logo": None,
+    "login_logo": None,
+    "login_logo_dark": None,
+    "site_logo_classes": "img-circle",
+    "site_icon": None,
+    "welcome_sign": "Drama Shorts 관리자 페이지",
+    "copyright": "Drama Shorts",
+    # 검색 모델
+    "search_model": ["auth.User"],
+    # 상단 메뉴 링크
+    "topmenu_links": [
+        {"name": "홈", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "사이트 보기", "url": "/", "new_window": True},
+    ],
+    # 사이드바 설정
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    "order_with_respect_to": ["auth"],
+    # 아이콘 설정 (Font Awesome 5)
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+    },
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-circle",
+    # UI 관련
+    "related_modal_active": True,
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+    # 언어 및 기타
+    "changeform_format": "horizontal_tabs",
+    "changeform_format_overrides": {},
+    "language_chooser": False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": False,
+    "accent": "accent-primary",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": False,
+    "navbar_fixed": False,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": True,
+    "sidebar": "sidebar-dark-primary",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "default",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-outline-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+}

@@ -11,5 +11,5 @@ COPY pyproject.toml uv.lock ./
 # 의존성 설치
 RUN uv sync --frozen
 
-# 개발 서버 실행 (hot reload)
-CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
+# 개발 서버 실행 (migration + superuser 생성 후 hot reload)
+CMD ["sh", "-c", "uv run python manage.py migrate && uv run python scripts/create_superuser.py && uv run python manage.py runserver 0.0.0.0:8000"]
