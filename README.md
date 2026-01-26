@@ -186,7 +186,7 @@ nano .env  # provision_aws.sh 출력값으로 수정
 ```
 
 ### 5. 접속
-https://your-domain.com/admin/
+https://drama.buuup.kr/admin/
 
 ## CI/CD (GitHub Actions)
 

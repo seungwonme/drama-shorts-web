@@ -183,5 +183,40 @@
     "time": "07:13:24",
     "user": "seungwonan",
     "prompt": "다크모드로 변경해봐 "
+  },
+  {
+    "time": "07:17:25",
+    "user": "seungwonan",
+    "prompt": "@infra/provision_aws.sh \n\n왜 443 포트를 안열지? 그리고 cloudflare ssl 인증서 쓸건데 그에 대한 내용이 없는 거 같아"
+  },
+  {
+    "time": "07:23:38",
+    "user": "seungwonan",
+    "prompt": "/init "
+  },
+  {
+    "time": "07:25:36",
+    "user": "seungwonan",
+    "prompt": "@infra/provision_aws.sh 코드가 괜찮은지 면밀하게 분석해줘 "
+  },
+  {
+    "time": "07:26:53",
+    "user": "seungwonan",
+    "prompt": "2,3,4,5,6,7 해줘\n1번은 유지할래"
+  },
+  {
+    "time": "07:31:23",
+    "user": "seungwonan",
+    "prompt": "\"drama.buuup.kr\" 도메인 사용할거야"
+  },
+  {
+    "time": "07:31:58",
+    "user": "seungwonan",
+    "prompt": "업데이트 ㄱㄱ"
+  },
+  {
+    "time": "07:32:59",
+    "user": "seungwonan",
+    "prompt": "이제 infra/provision_aws.sh 이부분은 문제 없는 거 맞지 ?"
   }
 ]
