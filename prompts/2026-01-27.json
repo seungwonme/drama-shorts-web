@@ -278,5 +278,10 @@
     "time": "08:09:38",
     "user": "seungwonan",
     "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/infra/setup_ec2.sh'\n\n/etc/ssl/cloudflare$ ls\norigin-key.pem  origin.pem\n\n설정 완료\\\n근데 '/Users/seungwonan/Dev/1-project/drama-shorts-web/infra/nginx.conf'가 제대로 안되어 있네"
+  },
+  {
+    "time": "08:14:31",
+    "user": "seungwonan",
+    "prompt": "배포환경에서 로그인은 되는데 css가 왜 깨지지?"
   }
 ]

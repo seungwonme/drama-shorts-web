@@ -9,6 +9,7 @@ services:
       - ./apps/backend/.env
     volumes:
       - sqlite_data:/app/data
+      - static_files:/app/staticfiles
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/admin/login/"]
