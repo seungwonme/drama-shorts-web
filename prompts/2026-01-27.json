@@ -28,5 +28,115 @@
     "time": "04:46:38",
     "user": "seungwonan",
     "prompt": "커밋 메시지 만들어줘"
+  },
+  {
+    "time": "04:48:38",
+    "user": "seungwonan",
+    "prompt": "aws로 배포하려고 해\n\n그냥 가장 작은 인스턴스에 장고 어드민으로 들어갈 수 있는 세팅만 할거야\n고정 IP까지 해야할 듯"
+  },
+  {
+    "time": "04:53:27",
+    "user": "seungwonan",
+    "prompt": "구조를 backend/ nginx(or server)/ 폴더로 나누는 게 낫지 않니?"
+  },
+  {
+    "time": "04:54:48",
+    "user": "seungwonan",
+    "prompt": "server라는 것이 모범적인 사례니?\n\n2026년 기준 웹 검색으로 확인해줘 "
+  },
+  {
+    "time": "05:01:52",
+    "user": "seungwonan",
+    "prompt": "drama-shorts-web/                                                                                                          \n  ├── apps/                                                                                                                  \n  │   └── backend/      # Django                                                                                             \n  ├── infra/            # nginx, systemd, setup                                                                              \n  │   ├── nginx.conf                                                                                                         \n  │   ├── drama-shorts.service                                                                                               \n  │   └── setup_ec2.sh                                                                                                       \n  └── README.md                    \n\n이 구조로 가자"
+  },
+  {
+    "time": "05:05:40",
+    "user": "seungwonan",
+    "prompt": "docker compose 파일 필요하겠다"
+  },
+  {
+    "time": "05:08:55",
+    "user": "seungwonan",
+    "prompt": "infra/docker-compose.yml 이게 루트 말고 infra 안에 있는게 정상이야?"
+  },
+  {
+    "time": "05:09:13",
+    "user": "seungwonan",
+    "prompt": "옮겨"
+  },
+  {
+    "time": "05:10:51",
+    "user": "seungwonan",
+    "prompt": "다시해줘 "
+  },
+  {
+    "time": "05:11:51",
+    "user": "seungwonan",
+    "prompt": ".env랑 .env.example로 보통 루트에 있지 않나?"
+  },
+  {
+    "time": "05:12:11",
+    "user": "seungwonan",
+    "prompt": "옮겨"
+  },
+  {
+    "time": "05:16:58",
+    "user": "seungwonan",
+    "prompt": "아니야 로컬 실행하는 쉘 스크립트가 있으면 좋겠어\n\n이 때 .env를 apps/backend/ 폴더에 넣어주고 컴포즈 돌리면 될 거 가탕"
+  },
+  {
+    "time": "05:22:19",
+    "user": "seungwonan",
+    "prompt": "cloudflare ssl 인증서로 https 구현할 건데\n인스턴스에 도커만 설치하고 nginx는 컨테이너로만 구현해도 괜찮니?\n\n직접 설치와 컨테이너 설치 장단점 설명좀 "
+  },
+  {
+    "time": "05:23:57",
+    "user": "seungwonan",
+    "prompt": "그렇게 하자\n그럼 '/Users/seungwonan/Dev/1-project/drama-shorts-web/infra/nginx.conf'이거 필요 없는 거 아냐?"
+  },
+  {
+    "time": "05:26:54",
+    "user": "seungwonan",
+    "prompt": "응 정리해"
+  },
+  {
+    "time": "05:35:25",
+    "user": "seungwonan",
+    "prompt": "aws cli로 컨테이너 만들고 s3 만들고 연결하는 과정까지 가능해?\n\ns3는 django admin에서 쓸 예정이야"
+  },
+  {
+    "time": "05:37:35",
+    "user": "seungwonan",
+    "prompt": "되어 있어"
+  },
+  {
+    "time": "05:48:14",
+    "user": "seungwonan",
+    "prompt": "현재 프로젝트 평가해줘\n\n1. 로컬 개발 환경 접근성\n2. 배포 편의성"
+  },
+  {
+    "time": "05:50:05",
+    "user": "seungwonan",
+    "prompt": "SQLite는 쓸거야\n나머지 차근차근 해보자 "
+  },
+  {
+    "time": "05:51:33",
+    "user": "seungwonan",
+    "prompt": "해줘 "
+  },
+  {
+    "time": "06:44:13",
+    "user": "seungwonan",
+    "prompt": "각 환경 변수들 어떻게 설정하는지 .env.example에 가이드라인 만들어줘\nREADME에도 "
+  },
+  {
+    "time": "06:45:36",
+    "user": "seungwonan",
+    "prompt": "aws cli로 한번에 전부 배포 가능하게 설정 되어 있는거야?"
+  },
+  {
+    "time": "06:46:35",
+    "user": "seungwonan",
+    "prompt": "@changes.txt 커밋 메시지 만들어줘 "
   }
 ]

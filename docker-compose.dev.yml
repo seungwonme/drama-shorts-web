@@ -1,0 +1,16 @@
+services:
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./apps/backend/.env
+    volumes:
+      - ./apps/backend:/app
+      - /app/.venv  # venv는 컨테이너 내부 유지
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:

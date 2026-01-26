@@ -1,0 +1,15 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# uv 설치
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# 의존성 파일 복사
+COPY pyproject.toml uv.lock ./
+
+# 의존성 설치
+RUN uv sync --frozen
+
+# 개발 서버 실행 (hot reload)
+CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
