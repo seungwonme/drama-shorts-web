@@ -1,0 +1,132 @@
+[
+  {
+    "time": "00:17:45",
+    "user": "seungwonan",
+    "prompt": "- [ ] 전체적인 프롬프트 고도화\n  - [ ] 현재 시퀀스 2초씩 4개 고정되어있는데 화자 단위로 시퀀스를 분리 (시퀀스 설명 세분화) (e.g. 00:00~01:30 \"저기요\" 캐릭터 A -> 01:30~02:00 \"어?\" 캐릭터 B ...)\n  - [ ] 2번째 씬 생성 프롬프트에 이전 씬에 대한 설명 추가\n  - [ ] 캐릭터 성별 및 묘사 디테일 추가\n\n@a.json \n\n1"
+  },
+  {
+    "time": "00:24:47",
+    "user": "seungwonan",
+    "prompt": "- [ ] 전체적인 프롬프트 고도화\n  - [ ] 현재 시퀀스 2초씩 4개 고정되어있는데 화자 단위로 시퀀스를 분리 (시퀀스 설명 세분화) (e.g. 00:00~01:30 \"저기요\" 캐릭터 A -> 01:30~02:00 \"어?\" 캐릭터 B ...)\n  - [ ] 2번째 씬 생성 프롬프트에 이전 씬에 대한 설명 추가\n  - [ ] 캐릭터 성별 및 묘사 디테일 추가\n\n@a.json \n\n1. scenes metadata 제거\n2. 한국어 대사 빼고는 전부 영어로 기록\n3. 루트 characters, scenes characters 겹치고 캐릭터에 대한 상세한 설명이 부족해. 내 생각에는 루트 characters의 id를 scenes 속 characters에서 참조하게 했으면 좋겠어 그 후에 프롬프트로 넣기 전에 확장시키는 거지\n  루트의 description을 더 구조화하여 나이대, 성별, 인종, 얼굴 생김새, 목소리 묘사 등 아주 자세히 서술하고 scenes 속 characters에서는 루트 characters의 id 및 emotion, position 등 씬에 필요한 정보를 가지면 될 거 같아\n4. timeline의 audio는 어떤 캐릭터가 말하는지 잘 모르기 때문에 현재 시퀀스 2초씩 4개 고정되어있는데 화자 단위로 시퀀스를 분리 (시퀀스 설명 세분화) (e.g. 00:00~01:30 \"저기요\" 캐릭터 A -> 01:30~02:00 \"어?\" 캐릭터 B ...)  이렇게 해줘 시퀀스에는 꼭 말이 들어가야하는 거는 아니야 행동 묘사도 그렇게 해줘\n5. timeline 속 정보 상세히 해줘 "
+  },
+  {
+    "time": "00:46:57",
+    "user": "seungwonan",
+    "prompt": "프롬프트 테스트를 위해 langgraph 스크립트 파일 만들어줘 tests/ 폴더에\n\n현재 모든 노드 그대로 넣어줄래?\n그리고 입력과 출력 모두 체크하기 쉽도록 마크다운 파일에 담는 식으로 할거야"
+  },
+  {
+    "time": "00:51:24",
+    "user": "seungwonan",
+    "prompt": "프롬프트 테스트를 위해 langgraph 스크립트 파일 만들어줘 tests/ 폴더에\n\n현재 모든 노드를 테스트하기 위해서 각 노드를 함수로 만들고"
+  },
+  {
+    "time": "00:51:49",
+    "user": "seungwonan",
+    "prompt": "프롬프트 테스트를 위해 langgraph 스크립트 파일 만들어줘 tests/ 폴더에\n\n현재 모든 노드를 테스트하기 위해서 각 노드를 함수로 만들고\n다음 노드를 실행하기 위한 프롬프트 "
+  },
+  {
+    "time": "00:53:49",
+    "user": "seungwonan",
+    "prompt": "프롬프트 테스트를 위해 langgraph 스크립트 파일 만들어줘 tests/ 폴더에\n\n현재 모든 노드를 테스트하기 위해서 각 노드를 함수로 만들고\n다음 노드를 실행하기 위한 프롬프트도 만드는 로직을 함수로 만들어줘\n\n그래서 내가 순서대로 실행할 수 있는 환경을 만들어줘\n(e.g. 1번째만 실행, 1~3번째 실행, 5번째만 실행(이 때 프롬프트 삽입)\n\nstructured output, prompt template 모두 현재 프로젝트와 똑같은 것을 사용해야해\n\n이 작업을 하는 의도는 프롬프트의 품질을 올리기 위함이야"
+  },
+  {
+    "time": "01:27:45",
+    "user": "seungwonan",
+    "prompt": "현재 langgraph state에 이미지/동영상을 갖고 있는데 그렇게 하지 말고"
+  },
+  {
+    "time": "01:27:50",
+    "user": "seungwonan",
+    "prompt": "현재 langgraph state에 이미지/동영상을 갖고 있는데 그렇게 하지 말고"
+  },
+  {
+    "time": "01:28:03",
+    "user": "seungwonan",
+    "prompt": "d"
+  },
+  {
+    "time": "01:31:19",
+    "user": "seungwonan",
+    "prompt": "현재 langgraph state에서 이미지/동영상 관리하는데\n이미지/영상 받았으면 S3에 저장하고 S3 링크를 저장하는 식으로 하면 좋겠어"
+  },
+  {
+    "time": "01:37:10",
+    "user": "seungwonan",
+    "prompt": "왜 bytes 필드 유지를 해야하지?\n다 바꿔 그냥"
+  },
+  {
+    "time": "02:16:34",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/a.md'\n\n첫 씬의 첫 프레임에 대한 피드백인데 어떤지 확인해줄래?"
+  },
+  {
+    "time": "02:17:37",
+    "user": "seungwonan",
+    "prompt": "이미지 프롬프트는 어디서 만들어 ?"
+  },
+  {
+    "time": "02:22:44",
+    "user": "seungwonan",
+    "prompt": "# Try structured output first, fallback to raw parsing\n    try:\n        log(\"Using structured output with Pydantic schema...\")\n        structured_llm = llm.with_structured_output(ScriptOutput)\n        result: ScriptOutput = structured_llm.invoke(messages)\n        data = result.model_dump()\n    except Exception as struct_error:\n        log(f\"Structured output failed: {struct_error}\", \"WARNING\")\n        log(\"Falling back to raw JSON parsing...\")\n\n        # Fallback: get raw response and parse manually\n        raw_response = llm.invoke(messages)\n        raw_content = raw_response.content\n\n        # Handle case where content is a list (e.g., [{'type': 'text', 'text': '...'}] or content blocks)\n        # Note: langchain_google_genai may return content block objects, not plain dicts\n        if not isinstance(raw_content, str):\n            text_parts = []\n            try:\n                for item in raw_content:\n                    # Try dict access first\n                    if isinstance(item, dict):\n                        if item.get(\"type\") == \"text\":\n                            text_parts.append(item.get(\"text\", \"\"))\n                    # Try object attribute access (for content block objects)\n                    elif hasattr(item, \"text\"):\n                        text_parts.append(str(item.text))\n                    # Try direct string conversion\n                    elif isinstance(item, str):\n                        text_parts.append(item)\n            except (TypeError, AttributeError):\n                pass  # Not iterable or other issue\n            raw_content = \"\".join(text_parts) if text_parts else str(raw_content)\n\n        log(f\"Raw response (first 500 chars): {raw_content[:500]}\")\n\n        # Try to extract JSON from response\n        import re\n        json_match = re.search(r'\\{[\\s\\S]*\\}', raw_content)\n        if json_match:\n            try:\n                data = json.loads(json_match.group())\n                log(\"Successfully parsed JSON from raw response\")\n            except json.JSONDecodeError as e:\n                log(f\"JSON parse error: {e}\", \"ERROR\")\n                raise\n        else:\n            log(\"No JSON found in response\", \"ERROR\")\n            raise ValueError(\"No valid JSON in response\")\n\n        # Normalize data to match expected schema\n        data = _normalize_script_data(data, base_prompt)\n\n    log(\"Structured output received:\")\n    print(\"-\" * 40)\n    print(json.dumps(data, ensure_ascii=False, indent=2)[:1500] + \"...\")\n    print(\"-\" * 40)\n\n    characters = data.get(\"characters\", {})\n    product = data.get(\"product\", {})\n    scenes = data.get(\"scenes\", [])\n\n    log(f\"AI decision - scenes: {len(scenes)}\")\n    log(f\"Product: {product.get('name', 'N/A') if isinstance(product, dict) else product}\")\n    log(f\"Character A: {characters.get('character_a', {}).get('name', 'N/A')}\")\n    log(f\"Character B: {characters.get('character_b', {}).get('name', 'N/A')}\")\n\n    return data\n\nfallback to raw parsing 안했으면 좋겠어 만약 안되면 그냥 END로 가면 될 거 같아\n재실행하면 되니까"
+  },
+  {
+    "time": "02:23:30",
+    "user": "seungwonan",
+    "prompt": "응 지워"
+  },
+  {
+    "time": "02:25:14",
+    "user": "seungwonan",
+    "prompt": "prompts.py 파일 거기에 템플릿 모두 모았으면 좋겠어\n지금 너무 각 파일에 있어서 정신 없다.\n\n사용하는 노드 순서대로 배치하고, 주석으로 설명 좀 넣어줘 "
+  },
+  {
+    "time": "02:49:48",
+    "user": "seungwonan",
+    "prompt": "contants.py를 지우면 될 거 같아\n\nprompt = (\n        f\"A SINGLE continuous photorealistic scene (NOT a split screen, NOT a collage, NOT multiple panels). \"\n        f\"Cinematic Korean drama moment in 9:16 portrait format for YouTube Shorts. \"\n        f\"Setting: {location}. Lighting: {lighting}. \"\n        f\"Two KOREAN people standing together in ONE unified scene: \"\n        f\"On the LEFT - {char_a_name}: {char_a_desc}. \"\n        f\"On the RIGHT - {char_b_name}: {char_b_desc}. \"\n        f\"Both characters MUST be ethnically Korean with East Asian features. \"\n        f\"They are facing each other in a dramatic confrontation pose. \"\n        f\"Korean drama style cinematography, high quality, photorealistic, 4K resolution. \"\n        f\"This is ONE single image with ONE continuous background, not divided into sections.\"\n    )\n\n이거 왜 쓰는 거임?"
+  },
+  {
+    "time": "03:36:44",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/apps/backend/videos/generators/prompts.py'\n\nhttps://reference.langchain.com/python/langchain_core/prompts/\n\nbuild_first_frame_prompt 이거 대신 이거 사용 ChatPromptTemplate"
+  },
+  {
+    "time": "03:40:14",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/crafton.mp4'\n\n0:43 ~ 0:56 ffmpeg로 잘라줘 "
+  },
+  {
+    "time": "03:44:17",
+    "user": "seungwonan",
+    "prompt": "ffmpeg -i /Users/seungwonan/Dev/1-project/drama-shorts-web/crafton.mp4 -ss 00:00:48 -to 00:00:56 -c copy crafton-auto.mp4 \n\n오디오 없는 영상으로 "
+  },
+  {
+    "time": "03:49:18",
+    "user": "seungwonan",
+    "prompt": "CTA_FRAME_PROMPT_TEMPLATE = \"\"\"A SINGLE continuous photorealistic scene (NOT a split screen, NOT a collage). \\\nKorean drama comedic twist ending - the FINAL MOMENT of reconciliation. \\\nIMPORTANT: Keep the EXACT SAME two characters ({char_a_name} and {char_b_name}) from the first reference image. \\\nTheir faces, clothing, and appearances must remain identical. \\\n{action_desc}\\\nThe two main characters have amused, surprised expressions - this is the punchline moment. \\\nPRODUCT PLACEMENT: The product from the SECOND reference image ('{product_name}') appears naturally in the scene - \\\non a table nearby, casually in one character's hand, or visible in the background. \\\nThe product is part of the scene, not presented to camera like an advertisement. \\\nNOTE: This is the final frame. The VIDEO leading up to this can include crowd reactions, \\\ndramatic reveals, and comedic buildup - but this ending frame shows the calm after the storm. \\\n9:16 portrait format. \\\nWarm, golden lighting. Comedic Korean drama atmosphere. \\\nHigh quality, photorealistic, 4K resolution.\"\"\"\n\n\n이거 안쓰인다"
+  },
+  {
+    "time": "03:49:34",
+    "user": "seungwonan",
+    "prompt": "CTA_FRAME_PROMPT_TEMPLATE 이거 안쓰인다고 "
+  },
+  {
+    "time": "03:55:01",
+    "user": "seungwonan",
+    "prompt": "https://fal.ai/models/fal-ai/nano-banana-pro/llms.txt\nhttps://fal.ai/models/fal-ai/nano-banana-pro/edit/llms.txt\nhttps://fal.ai/models/fal-ai/veo3.1/fast/first-last-frame-to-video/llms.txt\nhttps://fal.ai/models/fal-ai/veo3.1/fast/image-to-video/llms.txt\n\nveo3.1, nano banana pro fal.ai 로 변경"
+  },
+  {
+    "time": "04:26:14",
+    "user": "seungwonan",
+    "prompt": "✓ .env -> apps/backend/.env 복사 완료\n[+] Building 1.4s (15/15) FINISHED                                                                                                                                                                                                                                   \n => [internal] load local bake definitions                                                                                                                                                                                                                      0.0s\n => => reading from stdin 601B                                                                                                                                                                                                                                  0.0s\n => [internal] load build definition from Dockerfile.dev                                                                                                                                                                                              0.0s\n => => transferring dockerfile: 795B                                                                                                                                                                                                                            0.0s\n => [internal] load metadata for ghcr.io/astral-sh/uv:latest                                                                                                                                                                                                    1.0s\n => [internal] load metadata for docker.io/library/python:3.13-slim                                                                                                                                                                                             0.8s\n => [internal] load .dockerignore                                                                                                                                                                                                                               0.0s\n => => transferring context: 2B                                                                                                                                                                                                                                 0.0s\n => [stage-0 1/6] FROM docker.io/library/python:3.13-slim@sha256:51e1a0a317fdb6e170dc791bbeae63fac5272c82f43958ef74a34e170c6f8b18                                                                                                                               0.0s\n => FROM ghcr.io/astral-sh/uv:latest@sha256:143b40f4ab56a780f43377604702107b5a35f83a4453daf1e4be691358718a6a                                                                                                                                                    0.0s\n => [internal] load build context                                                                                                                                                                                                                               0.0s\n => => transferring context: 64B                                                                                                                                                                                                                                0.0s\n => CACHED [stage-0 2/6] WORKDIR /app                                                                                                                                                                                                                           0.0s\n => CACHED [stage-0 3/6] RUN apt-get update && apt-get install -y --no-install-recommends     libgl1     libglib2.0-0     libxcb1     libsm6     libxext6     libxrender1     ffmpeg     && rm -rf /var/lib/apt/lists/*                                         0.0s\n => CACHED [stage-0 4/6] COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv                                                                                                                                                                          0.0s\n => CACHED [stage-0 5/6] COPY pyproject.toml uv.lock ./                                                                                                                                                                                                         0.0s\n => CACHED [stage-0 6/6] RUN uv sync --frozen                                                                                                                                                                                                                   0.0s\n => exporting to image                                                                                                                                                                                                                                          0.0s\n => => exporting layers                                                                                                                                                                                                                                         0.0s\n => => writing image sha256:621b0cd38af2047b33c1ef2e00c647751a586bd040f40c5413c943cad09da2b5                                                                                                                                                                    0.0s\n => => naming to docker.io/library/drama-shorts-web-backend                                                                                                                                                                                                     0.0s\n => resolving provenance for metadata file                                                                                                                                                                                                                      0.0s\n[+] Running 1/1\n ✔ drama-shorts-web-backend  Built                                                                                                                                                                                                                            0.0s \nAttaching to backend-1\nbackend-1  | Operations to perform:\nbackend-1  |   Apply all migrations: admin, auth, contenttypes, sessions, videos\nbackend-1  | Running migrations:\nbackend-1  |   No migrations to apply.\nbackend-1  | \nbackend-1  | 0 static files copied to '/app/staticfiles', 169 unmodified, 449 post-processed, 3 skipped due to conflict.\nbackend-1  | Superuser 'admin' already exists.\nbackend-1  | Watching for file changes with StatReloader\nbackend-1  | [28/Jan/2026 04:25:27] \"GET /admin/ HTTP/1.1\" 302 0\nbackend-1  | [28/Jan/2026 04:25:27] \"GET /admin/login/?next=/admin/ HTTP/1.1\" 200 11647\nbackend-1  | [28/Jan/2026 04:25:34] \"POST /admin/login/?next=/admin/ HTTP/1.1\" 200 12517\nbackend-1  | [28/Jan/2026 04:25:49] \"POST /admin/login/?next=/admin/ HTTP/1.1\" 200 12517\n\nDJANGO_SUPERUSER_USERNAME=\"admin\"\nDJANGO_SUPERUSER_EMAIL=\"admin@example.com\"\nDJANGO_SUPERUSER_PASSWORD=\"demodev111!\"\n\ndemodev111! 비번이 안먹어"
+  },
+  {
+    "time": "04:33:05",
+    "user": "seungwonan",
+    "prompt": "현재 장고 어드민 페이지가 정적이라 변경 사항들이 새로고침해야 적용되는데 이거 어떻게 새로고침안해도 반영되게 할 수 있을까?\n\n쇼츠 생성\n진행도\n\n등 바로바로 반영되면 좋겠는데"
+  },
+  {
+    "time": "04:37:32",
+    "user": "seungwonan",
+    "prompt": "https://jongseoung.tistory.com/282"
+  }
+]

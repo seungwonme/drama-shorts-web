@@ -186,6 +186,9 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": False,
     "ENVIRONMENT": "config.settings.environment_callback",
+    "SCRIPTS": [
+        "https://unpkg.com/htmx.org@2.0.4",
+    ],
     "COLORS": {
         "font": {
             "subtle-light": "107 114 128",

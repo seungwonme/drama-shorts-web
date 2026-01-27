@@ -27,9 +27,7 @@ class AutoModelAdmin(ModelAdmin):
 
         # search_fields: CharField, TextField만
         self.search_fields = [
-            f.name
-            for f in model._meta.fields
-            if f.__class__.__name__ in ("CharField", "TextField")
+            f.name for f in model._meta.fields if f.__class__.__name__ in ("CharField", "TextField")
         ][:3]
 
         # list_filter: 선택 가능한 필드만
@@ -171,14 +169,34 @@ class ProductAdmin(ModelAdmin):
 
 @admin.register(ProductImage)
 class ProductImageAdmin(ModelAdmin):
-    list_display = ["id", "product", "image_preview", "alt_text", "is_primary", "order", "created_at"]
+    list_display = [
+        "id",
+        "product",
+        "image_preview",
+        "alt_text",
+        "is_primary",
+        "order",
+        "created_at",
+    ]
     list_filter = ["is_primary", "product", "created_at"]
     search_fields = ["product__name", "alt_text"]
     list_display_links = ["id"]
     autocomplete_fields = ["product"]
 
     fieldsets = (
-        (None, {"fields": ("product", "image", "image_preview_large", "alt_text", "is_primary", "order")}),
+        (
+            None,
+            {
+                "fields": (
+                    "product",
+                    "image",
+                    "image_preview_large",
+                    "alt_text",
+                    "is_primary",
+                    "order",
+                )
+            },
+        ),
         ("메타", {"fields": ("created_at",), "classes": ("collapse",)}),
     )
     readonly_fields = ["created_at", "image_preview_large"]
@@ -264,7 +282,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
         "product",
         "status_badge",
         "progress_bar",
-        "current_step",
+        "current_step_display",
         "segment_count",
         "video_preview",
         "created_at",
@@ -307,6 +325,107 @@ class VideoGenerationJobAdmin(ModelAdmin):
         "regenerate_final_video_action",
     ]
 
+    # =========================================================================
+    # HTMX URLs and Views
+    # =========================================================================
+
+    def get_urls(self):
+        from django.urls import path
+
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "htmx/<int:job_id>/status/",
+                self.admin_site.admin_view(self.htmx_status_view),
+                name="videos_videogenerationjob_htmx_status",
+            ),
+            path(
+                "htmx/<int:job_id>/progress/",
+                self.admin_site.admin_view(self.htmx_progress_view),
+                name="videos_videogenerationjob_htmx_progress",
+            ),
+            path(
+                "htmx/<int:job_id>/current-step/",
+                self.admin_site.admin_view(self.htmx_current_step_view),
+                name="videos_videogenerationjob_htmx_current_step",
+            ),
+            path(
+                "htmx/<int:job_id>/row-actions/",
+                self.admin_site.admin_view(self.htmx_row_actions_view),
+                name="videos_videogenerationjob_htmx_row_actions",
+            ),
+            path(
+                "htmx/<int:job_id>/progress-steps/",
+                self.admin_site.admin_view(self.htmx_progress_steps_view),
+                name="videos_videogenerationjob_htmx_progress_steps",
+            ),
+        ]
+        return custom_urls + urls
+
+    def _is_polling_active(self, job):
+        """Check if HTMX polling should continue."""
+        return job.status not in [
+            VideoGenerationJob.Status.COMPLETED,
+            VideoGenerationJob.Status.FAILED,
+            VideoGenerationJob.Status.PENDING,
+        ]
+
+    def _get_htmx_attrs(self, job, endpoint, interval="3s"):
+        """Generate HTMX attributes for polling."""
+        if not self._is_polling_active(job):
+            return ""
+        return f'hx-get="/admin/videos/videogenerationjob/htmx/{job.pk}/{endpoint}/" hx-trigger="every {interval}" hx-swap="outerHTML"'
+
+    def htmx_status_view(self, request, job_id):
+        from django.http import HttpResponse
+
+        try:
+            job = VideoGenerationJob.objects.get(pk=job_id)
+        except VideoGenerationJob.DoesNotExist:
+            return HttpResponse("-")
+
+        return HttpResponse(self._render_status_badge(job))
+
+    def htmx_progress_view(self, request, job_id):
+        from django.http import HttpResponse
+
+        try:
+            job = VideoGenerationJob.objects.get(pk=job_id)
+        except VideoGenerationJob.DoesNotExist:
+            return HttpResponse("-")
+
+        return HttpResponse(self._render_progress_bar(job))
+
+    def htmx_current_step_view(self, request, job_id):
+        from django.http import HttpResponse
+
+        try:
+            job = VideoGenerationJob.objects.get(pk=job_id)
+        except VideoGenerationJob.DoesNotExist:
+            return HttpResponse("-")
+
+        return HttpResponse(self._render_current_step(job))
+
+    def htmx_row_actions_view(self, request, job_id):
+        from django.http import HttpResponse
+
+        try:
+            job = VideoGenerationJob.objects.get(pk=job_id)
+        except VideoGenerationJob.DoesNotExist:
+            return HttpResponse("-")
+
+        return HttpResponse(self._render_row_actions(job))
+
+    def htmx_progress_steps_view(self, request, job_id):
+        from django.http import HttpResponse
+
+        try:
+            job = VideoGenerationJob.objects.get(pk=job_id)
+        except VideoGenerationJob.DoesNotExist:
+            return HttpResponse("-")
+
+        return HttpResponse(self._render_progress_steps(job))
+
     def get_actions_detail(self, request, object_id=None):
         """상태에 따라 표시할 액션 결정 - UnfoldAction 객체 리스트 반환"""
         # 부모 메서드 호출하여 UnfoldAction 객체 리스트 가져오기
@@ -324,7 +443,8 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
         # UnfoldAction 객체 중 허용된 것만 필터링
         return [
-            action for action in all_actions
+            action
+            for action in all_actions
             if any(action.action_name.endswith(f"_{name}") for name in allowed_action_names)
         ]
 
@@ -443,7 +563,11 @@ class VideoGenerationJobAdmin(ModelAdmin):
     def generate_video_action(self, request, object_id):
         from django.shortcuts import redirect
 
-        from .services import generate_video_sync, generate_video_with_resume, get_resume_entry_point
+        from .services import (
+            generate_video_sync,
+            generate_video_with_resume,
+            get_resume_entry_point,
+        )
 
         job = self.get_object(request, object_id)
 
@@ -615,7 +739,10 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
         return redirect(request.META.get("HTTP_REFERER", ".."))
 
-    @action(description="CTA 마지막 프레임 재생성 (Nano Banana)", url_path="regenerate_cta_last_frame_action")
+    @action(
+        description="CTA 마지막 프레임 재생성 (Nano Banana)",
+        url_path="regenerate_cta_last_frame_action",
+    )
     def regenerate_cta_last_frame_action(self, request, object_id):
         from django.shortcuts import redirect
 
@@ -706,7 +833,11 @@ class VideoGenerationJobAdmin(ModelAdmin):
     @admin.action(description="선택된 작업 영상 생성/재시도")
     def bulk_generate_video_action(self, request, queryset):
         """선택된 PENDING 또는 FAILED 작업들의 영상 생성 (실패 시 자동 재개)"""
-        from .services import generate_video_sync, generate_video_with_resume, get_resume_entry_point
+        from .services import (
+            generate_video_sync,
+            generate_video_with_resume,
+            get_resume_entry_point,
+        )
 
         allowed_statuses = [VideoGenerationJob.Status.PENDING, VideoGenerationJob.Status.FAILED]
         eligible_jobs = queryset.filter(status__in=allowed_statuses)
@@ -752,12 +883,12 @@ class VideoGenerationJobAdmin(ModelAdmin):
     # 행별 액션 버튼
     # =========================================================================
 
-    @admin.display(description="액션")
-    def row_actions(self, obj):
-        """각 행에 액션 버튼 표시"""
+    def _render_row_actions(self, obj):
+        """Render row action buttons HTML with HTMX attributes."""
         from django.urls import reverse
 
         buttons = []
+        hx_attrs = self._get_htmx_attrs(obj, "row-actions")
 
         if obj.status == VideoGenerationJob.Status.PENDING:
             url = reverse("admin:videos_videogenerationjob_change", args=[obj.pk])
@@ -782,16 +913,18 @@ class VideoGenerationJobAdmin(ModelAdmin):
             VideoGenerationJob.Status.GENERATING_S2,
             VideoGenerationJob.Status.CONCATENATING,
         ]:
-            # 진행중 상태: 취소 버튼
             url = reverse("admin:videos_videogenerationjob_cancel_video_action", args=[obj.pk])
             buttons.append(
                 f'<a href="{url}" class="px-3 py-1 bg-gray-600 text-white rounded-md text-xs font-medium hover:bg-gray-700">취소</a>'
             )
 
-        if not buttons:
-            return "-"
+        content = " ".join(buttons) if buttons else "-"
+        return f"<span {hx_attrs}>{content}</span>"
 
-        return mark_safe(" ".join(buttons))
+    @admin.display(description="액션")
+    def row_actions(self, obj):
+        """각 행에 액션 버튼 표시"""
+        return mark_safe(self._render_row_actions(obj))
 
     def video_style_badge(self, obj):
         """영상 스타일 배지"""
@@ -808,7 +941,8 @@ class VideoGenerationJobAdmin(ModelAdmin):
     video_style_badge.short_description = "스타일"
     video_style_badge.admin_order_field = "video_style"
 
-    def status_badge(self, obj):
+    def _render_status_badge(self, obj):
+        """Render status badge HTML with HTMX attributes."""
         colors = {
             VideoGenerationJob.Status.PENDING: "bg-gray-100 text-gray-700",
             VideoGenerationJob.Status.PLANNING: "bg-blue-100 text-blue-700",
@@ -821,18 +955,17 @@ class VideoGenerationJobAdmin(ModelAdmin):
             VideoGenerationJob.Status.FAILED: "bg-red-100 text-red-700",
         }
         css_class = colors.get(obj.status, "bg-gray-100 text-gray-700")
-        return format_html(
-            '<span class="{} px-2 py-1 rounded-md text-xs font-medium">{}</span>',
-            css_class,
-            obj.get_status_display(),
-        )
+        hx_attrs = self._get_htmx_attrs(obj, "status")
+        return f'<span class="{css_class} px-2 py-1 rounded-md text-xs font-medium" {hx_attrs}>{obj.get_status_display()}</span>'
+
+    def status_badge(self, obj):
+        return mark_safe(self._render_status_badge(obj))
 
     status_badge.short_description = "상태"
     status_badge.admin_order_field = "status"
 
-    def progress_bar(self, obj):
-        """진행 바 표시 (7단계)"""
-        # 상태별 진행률 (7단계: 0%, 14%, 28%, 42%, 57%, 71%, 86%, 100%)
+    def _render_progress_bar(self, obj):
+        """Render progress bar HTML with HTMX attributes."""
         progress_map = {
             VideoGenerationJob.Status.PENDING: 0,
             VideoGenerationJob.Status.PLANNING: 14,
@@ -845,55 +978,65 @@ class VideoGenerationJobAdmin(ModelAdmin):
             VideoGenerationJob.Status.FAILED: 0,
         }
         progress = progress_map.get(obj.status, 0)
+        hx_attrs = self._get_htmx_attrs(obj, "progress")
 
-        # 실패 상태: failed_at_status 기준으로 진행도 표시
+        # Failed state
         if obj.status == VideoGenerationJob.Status.FAILED:
-            # 실패 지점까지의 진행률 계산
             failed_progress = progress_map.get(obj.failed_at_status, 0)
             if failed_progress > 0:
-                return format_html(
-                    '<div style="width: 100px; height: 8px; background: #fee2e2; border-radius: 4px; overflow: hidden;">'
-                    '<div style="width: {}%; height: 100%; background: #ef4444; border-radius: 4px;"></div>'
-                    '</div>'
-                    '<span style="font-size: 10px; color: #ef4444;">실패 ({}%)</span>',
-                    failed_progress,
-                    failed_progress,
-                )
-            return mark_safe(
-                '<div style="width: 100px; height: 8px; background: #fee2e2; border-radius: 4px;">'
-                '</div>'
-                '<span style="font-size: 10px; color: #ef4444;">실패</span>'
-            )
+                return f"""<div {hx_attrs}>
+                    <div style="width: 100px; height: 8px; background: #fee2e2; border-radius: 4px; overflow: hidden;">
+                        <div style="width: {failed_progress}%; height: 100%; background: #ef4444; border-radius: 4px;"></div>
+                    </div>
+                    <span style="font-size: 10px; color: #ef4444;">실패 ({failed_progress}%)</span>
+                </div>"""
+            return f"""<div {hx_attrs}>
+                <div style="width: 100px; height: 8px; background: #fee2e2; border-radius: 4px;"></div>
+                <span style="font-size: 10px; color: #ef4444;">실패</span>
+            </div>"""
 
-        # 완료 상태
+        # Completed state
         if obj.status == VideoGenerationJob.Status.COMPLETED:
-            return mark_safe(
-                '<div style="width: 100px; height: 8px; background: #dcfce7; border-radius: 4px;">'
-                '<div style="width: 100%; height: 100%; background: #22c55e; border-radius: 4px;"></div>'
-                '</div>'
-                '<span style="font-size: 10px; color: #22c55e;">100%</span>'
-            )
+            return f"""<div {hx_attrs}>
+                <div style="width: 100px; height: 8px; background: #dcfce7; border-radius: 4px;">
+                    <div style="width: 100%; height: 100%; background: #22c55e; border-radius: 4px;"></div>
+                </div>
+                <span style="font-size: 10px; color: #22c55e;">100%</span>
+            </div>"""
 
-        # 대기 상태
+        # Pending state
         if obj.status == VideoGenerationJob.Status.PENDING:
-            return mark_safe(
-                '<div style="width: 100px; height: 8px; background: #f3f4f6; border-radius: 4px;">'
-                '</div>'
-                '<span style="font-size: 10px; color: #9ca3af;">대기중</span>'
-            )
+            return f"""<div {hx_attrs}>
+                <div style="width: 100px; height: 8px; background: #f3f4f6; border-radius: 4px;"></div>
+                <span style="font-size: 10px; color: #9ca3af;">대기중</span>
+            </div>"""
 
-        # 진행중 상태 (애니메이션 효과)
-        return format_html(
-            '<div style="width: 100px; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">'
-            '<div style="width: {}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); '
-            'border-radius: 4px; animation: pulse 2s infinite;"></div>'
-            '</div>'
-            '<span style="font-size: 10px; color: #3b82f6;">{}%</span>',
-            progress,
-            progress,
-        )
+        # In progress state
+        return f"""<div {hx_attrs}>
+            <div style="width: 100px; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                <div style="width: {progress}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa);
+                    border-radius: 4px; animation: pulse 2s infinite;"></div>
+            </div>
+            <span style="font-size: 10px; color: #3b82f6;">{progress}%</span>
+        </div>"""
+
+    def progress_bar(self, obj):
+        """진행 바 표시 (7단계)"""
+        return mark_safe(self._render_progress_bar(obj))
 
     progress_bar.short_description = "진행도"
+
+    def _render_current_step(self, obj):
+        """Render current step HTML with HTMX attributes."""
+        hx_attrs = self._get_htmx_attrs(obj, "current-step")
+        step = obj.current_step or "-"
+        return f"<span {hx_attrs}>{step}</span>"
+
+    def current_step_display(self, obj):
+        """현재 단계 표시"""
+        return mark_safe(self._render_current_step(obj))
+
+    current_step_display.short_description = "현재 단계"
 
     def segment_count(self, obj):
         total = obj.segments.count()
@@ -947,8 +1090,10 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
     cta_last_frame_preview.short_description = "CTA 마지막 프레임"
 
-    def progress_steps_display(self, obj):
-        """단계별 진행 상황 표시 (7단계)"""
+    def _render_progress_steps(self, obj):
+        """Render progress steps HTML with HTMX attributes."""
+        hx_attrs = self._get_htmx_attrs(obj, "progress-steps")
+
         # 단계 정의 (7단계)
         steps = [
             ("pending", "대기", "작업이 대기열에 있습니다"),
@@ -995,8 +1140,8 @@ class VideoGenerationJobAdmin(ModelAdmin):
             </div>
             """
 
-            # 진행 바
-            html = error_html + f"""
+            # 진행 바 (with HTMX wrapper)
+            html = f"""<div {hx_attrs}>{error_html}
             <div style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="font-size: 14px; font-weight: 600; color: #374151;">진행률 (실패 시점)</span>
@@ -1043,13 +1188,13 @@ class VideoGenerationJobAdmin(ModelAdmin):
                 </div>
                 """
 
-            html += "</div>"
-            return mark_safe(html)
+            html += "</div></div>"
+            return html
 
-        # 진행 바 (7단계)
+        # 진행 바 (7단계) - with HTMX wrapper
         progress_percent = min(100, (current_order / 7) * 100)
 
-        html = f"""
+        html = f"""<div {hx_attrs}>
         <div style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="font-size: 14px; font-weight: 600; color: #374151;">전체 진행률</span>
@@ -1101,8 +1246,12 @@ class VideoGenerationJobAdmin(ModelAdmin):
             </div>
             """
 
-        html += "</div>"
-        return mark_safe(html)
+        html += "</div></div>"
+        return html
+
+    def progress_steps_display(self, obj):
+        """단계별 진행 상황 표시 (7단계)"""
+        return mark_safe(self._render_progress_steps(obj))
 
     progress_steps_display.short_description = "진행 상황"
 
@@ -1132,7 +1281,18 @@ class VideoSegmentAdmin(ModelAdmin):
     fieldsets = (
         (None, {"fields": ("job", "segment_index", "title", "seconds")}),
         ("프롬프트", {"fields": ("prompt",)}),
-        ("결과", {"fields": ("status", "video_file", "video_preview_large", "last_frame", "last_frame_preview_large")}),
+        (
+            "결과",
+            {
+                "fields": (
+                    "status",
+                    "video_file",
+                    "video_preview_large",
+                    "last_frame",
+                    "last_frame_preview_large",
+                )
+            },
+        ),
         ("에러", {"fields": ("error_message",), "classes": ("collapse",)}),
     )
     readonly_fields = ["video_preview_large", "last_frame_preview_large"]
@@ -1140,6 +1300,7 @@ class VideoSegmentAdmin(ModelAdmin):
     @admin.display(description="작업")
     def job_link(self, obj):
         from django.urls import reverse
+
         url = reverse("admin:videos_videogenerationjob_change", args=[obj.job_id])
         return format_html('<a href="{}">{}</a>', url, obj.job.topic[:30])
 
@@ -1173,7 +1334,7 @@ class VideoSegmentAdmin(ModelAdmin):
             return format_html(
                 '<video width="480" height="270" controls style="border-radius: 8px;">'
                 '<source src="{}" type="video/mp4">'
-                '</video>',
+                "</video>",
                 obj.video_file.url,
             )
         return "-"

@@ -1,28 +1,37 @@
-"""Constants for Korean Drama Video Generator."""
+"""프롬프트 템플릿 모음.
+
+영상 생성 워크플로우의 모든 프롬프트를 노드 실행 순서대로 정리합니다.
+
+워크플로우 순서:
+1. plan_script       - Gemini로 스크립트 기획 (SCRIPT_SYSTEM_PROMPT)
+2. prepare_first_frame - Nano Banana로 첫 프레임 생성 (FIRST_FRAME_PROMPT)
+3. generate_scene1   - Veo로 Scene 1 생성 (segments[0].prompt 사용)
+4. prepare_cta_frame - Nano Banana로 CTA 프레임 생성 (CTA_FRAME_PROMPT)
+5. generate_scene2   - Veo로 Scene 2 생성 (segments[1].prompt 사용)
+6. concatenate_videos - FFmpeg로 병합 (프롬프트 없음)
+"""
 
 from enum import Enum
 
+from langchain_core.prompts import ChatPromptTemplate
 
 # =============================================================================
-# VIDEO STYLE TEMPLATES
+# 1. PLAN_SCRIPT: 스크립트 기획 프롬프트
 # =============================================================================
+
+
 class VideoStyle(str, Enum):
     """영상 스타일 템플릿"""
 
     MAKJANG_DRAMA = "makjang_drama"  # B급 막장 드라마 (기본)
-    # 추후 확장 예정:
-    # ROMANTIC_COMEDY = "romantic_comedy"  # 로맨틱 코미디
-    # EMOTIONAL = "emotional"  # 감동/힐링
-    # OFFICE_COMEDY = "office_comedy"  # 직장 코미디
 
 
-# 기본 스타일
 DEFAULT_VIDEO_STYLE = VideoStyle.MAKJANG_DRAMA
 
 
-# =============================================================================
-# BASE INSTRUCTIONS: 모든 스타일에 적용되는 공통 규칙
-# =============================================================================
+# -----------------------------------------------------------------------------
+# 1-1. 공통 규칙: 모든 스타일에 적용
+# -----------------------------------------------------------------------------
 COMMON_BASE_INSTRUCTIONS = """
 # CRITICAL VIDEO RULES
 - **NO TEXT ON SCREEN**: Do NOT include any text overlays, subtitles, captions, or CTA text in the video.
@@ -94,11 +103,10 @@ Each timeline sequence의 "action" 필드는 Veo가 이해할 수 있도록 매�
 """
 
 
-# =============================================================================
-# STYLE-SPECIFIC INSTRUCTIONS: 스타일별 특화 규칙
-# =============================================================================
-STYLE_INSTRUCTIONS = {
-    VideoStyle.MAKJANG_DRAMA: """
+# -----------------------------------------------------------------------------
+# 1-2. 스타일별 규칙: B급 막장 드라마
+# -----------------------------------------------------------------------------
+MAKJANG_DRAMA_INSTRUCTIONS = """
 # FORMAT: B급 막장 드라마 (DRAMATIZED AD - 2-SCENE STRUCTURE)
 Every video MUST follow this proven viral structure:
 
@@ -188,36 +196,26 @@ Scene 2의 마지막 시퀀스(6-8초)는 B급 코믹 반전으로 끝나야 합
 - 두 주인공의 코믹한 리액션 (놀람, 어이없음, 웃음)
 - **제품이 프레임 중앙에 크게 보이도록 배치 (강조)**
 - 제품에 조명이 비춰 시선을 끌도록
+- 배경의 현수막, 벽 등에 은은하게 제품이 보이도록
 - ❌ 로고를 정면으로 크게 들고 광고하는 포즈
 - ❌ 군중이 환호하는 장면 (중간 영상에서는 OK)
 
 # SCENE 2 VIDEO GENERATION RULES (중요)
 Scene 2 영상 생성 시 반드시 지켜야 할 규칙:
 1. **제품 강조**: 마지막 프레임에 제품이 눈에 띄게 보이도록 프롬프트에 명시
-2. **글씨 없음**: 영상 내 어떤 텍스트도 포함되지 않도록 negative prompt에 추가
    - "no text, no subtitles, no captions, no signs, no banners, no written words"
+2. **글씨 없음**: 영상 내 어떤 텍스트도 포함되지 않도록 negative prompt에 추가
 3. **연속적 흐름**: Scene 1 마지막 프레임에서 자연스럽게 이어지는 동작
-""",
+"""
+
+STYLE_INSTRUCTIONS = {
+    VideoStyle.MAKJANG_DRAMA: MAKJANG_DRAMA_INSTRUCTIONS,
 }
 
 
-def get_style_instructions(style: VideoStyle) -> str:
-    """스타일별 특화 규칙 반환"""
-    return STYLE_INSTRUCTIONS.get(style, STYLE_INSTRUCTIONS[DEFAULT_VIDEO_STYLE])
-
-
-def get_base_instructions(style: VideoStyle = DEFAULT_VIDEO_STYLE) -> str:
-    """공통 규칙 + 스타일별 규칙 합쳐서 반환"""
-    return COMMON_BASE_INSTRUCTIONS + get_style_instructions(style)
-
-
-# 기존 BASE_INSTRUCTIONS 호환성 유지 (기본값: B급 막장 드라마)
-BASE_INSTRUCTIONS = get_base_instructions(DEFAULT_VIDEO_STYLE)
-
-
-# =============================================================================
-# PROMPT TEMPLATE: JSON 스키마 가이드
-# =============================================================================
+# -----------------------------------------------------------------------------
+# 1-3. JSON 스키마 가이드
+# -----------------------------------------------------------------------------
 PROMPT_TEMPLATE_GUIDE = """
 Each scene uses this PROMPT_TEMPLATE structure that Veo understands:
 ```
@@ -288,9 +286,9 @@ Each scene uses this PROMPT_TEMPLATE structure that Veo understands:
 """
 
 
-# =============================================================================
-# EXAMPLE OUTPUT: JSON 예제 (f-string 충돌 방지를 위해 별도 상수)
-# =============================================================================
+# -----------------------------------------------------------------------------
+# 1-4. JSON 예제 출력
+# -----------------------------------------------------------------------------
 EXAMPLE_OUTPUT_JSON = """
 # EXAMPLE OUTPUT
 {
@@ -454,24 +452,36 @@ EXAMPLE_OUTPUT_JSON = """
 Output ONLY valid JSON (no markdown, no backticks, no explanation).
 """
 
-# =============================================================================
-# SYSTEM PROMPT GENERATORS: 스타일별 시스템 프롬프트 생성 함수
-# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1-5. 시스템 프롬프트 생성 함수
+# -----------------------------------------------------------------------------
+def get_style_instructions(style: VideoStyle) -> str:
+    """스타일별 특화 규칙 반환"""
+    return STYLE_INSTRUCTIONS.get(style, STYLE_INSTRUCTIONS[DEFAULT_VIDEO_STYLE])
+
+
+def get_base_instructions(style: VideoStyle = DEFAULT_VIDEO_STYLE) -> str:
+    """공통 규칙 + 스타일별 규칙 합쳐서 반환"""
+    return COMMON_BASE_INSTRUCTIONS + get_style_instructions(style)
 
 
 def get_auto_system_prompt(style: VideoStyle = DEFAULT_VIDEO_STYLE) -> str:
-    """자동 생성 모드 시스템 프롬프트 (스타일 선택 가능)"""
+    """자동 생성 모드 시스템 프롬프트 (topic만 주어졌을 때)"""
     base_instructions = get_base_instructions(style)
-    return f"""# ROLE
+    return (
+        f"""# ROLE
 You are a **Dramatized Ad (드라마타이즈 광고)** video prompt engineer for **YouTube Shorts** using **Veo 3.1**.
 Your specialty: Creating viral short-form ads that combine K-drama style hooks with product promotion.
 {base_instructions}
 {PROMPT_TEMPLATE_GUIDE}
-""" + EXAMPLE_OUTPUT_JSON
+"""
+        + EXAMPLE_OUTPUT_JSON
+    )
 
 
 def get_script_system_prompt(style: VideoStyle = DEFAULT_VIDEO_STYLE) -> str:
-    """스크립트 모드 시스템 프롬프트 (스타일 선택 가능)"""
+    """스크립트 모드 시스템 프롬프트 (사용자 스크립트가 주어졌을 때)"""
     base_instructions = get_base_instructions(style)
     return f"""# ROLE
 You are a **Dramatized Ad (드라마타이즈 광고)** video prompt engineer for **YouTube Shorts** using **Veo 3.1**.
@@ -496,8 +506,69 @@ Output ONLY valid JSON (no markdown, no backticks, no explanation).
 """
 
 
+# 기본 시스템 프롬프트 (호환성 유지)
+SCRIPT_SYSTEM_PROMPT = get_auto_system_prompt(DEFAULT_VIDEO_STYLE)
+
+
 # =============================================================================
-# 기존 상수 호환성 유지 (기본값: B급 막장 드라마)
+# 2. PREPARE_FIRST_FRAME: 첫 프레임 이미지 생성 프롬프트
 # =============================================================================
-KOREAN_DRAMA_SYSTEM_PROMPT = get_auto_system_prompt(DEFAULT_VIDEO_STYLE)
-SCRIPT_MODE_SYSTEM_PROMPT = get_script_system_prompt(DEFAULT_VIDEO_STYLE)
+# Nano Banana (Replicate) 모델용 프롬프트
+# 두 캐릭터가 대치하는 K-드라마 스타일 첫 장면
+
+FIRST_FRAME_PROMPT = ChatPromptTemplate.from_template(
+    """A SINGLE continuous photorealistic scene (NOT a split screen, NOT a collage, NOT multiple panels). \
+Cinematic Korean drama moment in 9:16 portrait format for YouTube Shorts. \
+Setting: {location}. Lighting: {lighting}. \
+Two KOREAN people standing together in ONE unified scene: \
+On the LEFT - {char_a_name}: {char_a_desc}. \
+On the RIGHT - {char_b_name}: {char_b_desc}. \
+Both characters MUST be ethnically Korean with East Asian features. \
+They are facing each other in a dramatic confrontation pose. \
+Korean drama style cinematography, high quality, photorealistic, 4K resolution. \
+This is ONE single image with ONE continuous background, not divided into sections."""
+)
+
+
+# =============================================================================
+# 3. GENERATE_SCENE1: Scene 1 영상 생성
+# =============================================================================
+# Veo 프롬프트는 plan_script에서 생성된 segments[0].prompt를 그대로 사용
+# 별도 템플릿 없음
+
+
+# =============================================================================
+# 4. PREPARE_CTA_FRAME: CTA 마지막 프레임 이미지 생성 프롬프트
+# =============================================================================
+# Nano Banana (Replicate) 모델용 프롬프트
+# Scene 2의 마지막 프레임 - 제품과 함께 화해하는 장면
+
+CTA_FRAME_PROMPT = ChatPromptTemplate.from_template(
+    """A SINGLE continuous photorealistic scene (NOT a split screen, NOT a collage). \
+Korean drama comedic twist ending - the FINAL MOMENT of reconciliation. \
+IMPORTANT: Keep the EXACT SAME two characters ({char_a_name} and {char_b_name}) from the first reference image. \
+Their faces, clothing, and appearances must remain identical. \
+{action_desc}\
+The two main characters have amused, surprised expressions - this is the punchline moment. \
+PRODUCT PLACEMENT: The product from the SECOND reference image ('{product_name}') appears naturally in the scene - \
+on a table nearby, casually in one character's hand, or visible in the background. \
+The product is part of the scene, not presented to camera like an advertisement. \
+NOTE: This is the final frame. The VIDEO leading up to this can include crowd reactions, \
+dramatic reveals, and comedic buildup - but this ending frame shows the calm after the storm. \
+9:16 portrait format. \
+Warm, golden lighting. Comedic Korean drama atmosphere. \
+High quality, photorealistic, 4K resolution."""
+)
+
+
+# =============================================================================
+# 5. GENERATE_SCENE2: Scene 2 영상 생성
+# =============================================================================
+# Veo 프롬프트는 plan_script에서 생성된 segments[1].prompt를 그대로 사용
+# 별도 템플릿 없음
+
+
+# =============================================================================
+# 6. CONCATENATE_VIDEOS: 영상 병합
+# =============================================================================
+# FFmpeg 사용, 프롬프트 없음

@@ -1,4 +1,4 @@
-"""Video generator nodes - generates video segments using Replicate Veo."""
+"""Video generator nodes - generates video segments using fal.ai Veo."""
 
 import tempfile
 from pathlib import Path
@@ -7,9 +7,9 @@ from moviepy import VideoFileClip
 from PIL import Image as PILImage
 
 from ..exceptions import ModerationError
+from ..services.fal_client import generate_video_from_image, generate_video_interpolation
 from ..services.prompt_sanitizer import quick_sanitize_names, sanitize_prompt_for_veo
-from ..services.replicate_client import create_and_download_video
-from ..state import SegmentVideo, VideoGeneratorState
+from ..state import VideoGeneratorState
 from ..utils.logging import log, log_separator
 
 # Maximum retry attempts for moderation errors
@@ -53,21 +53,17 @@ def extract_last_frame_from_bytes(video_bytes: bytes) -> bytes:
         tmp_path.unlink(missing_ok=True)
 
 
-def _generate_video_with_retry(
+def _generate_scene1_with_retry(
     prompt: str,
-    first_frame: bytes | None,
-    last_frame: bytes | None,
+    first_frame_url: str,
     duration: int,
-    scene_num: int,
 ) -> bytes | None:
-    """Generate video with retry logic for moderation errors.
+    """Generate Scene 1 video with retry logic for moderation errors.
 
     Args:
         prompt: Video generation prompt
-        first_frame: Starting frame image bytes
-        last_frame: Ending frame image bytes (for interpolation)
+        first_frame_url: URL of the starting frame image
         duration: Video duration in seconds
-        scene_num: Scene number for logging
 
     Returns:
         Video bytes or None if all retries failed
@@ -75,19 +71,18 @@ def _generate_video_with_retry(
     current_prompt = prompt
     for attempt in range(MAX_MODERATION_RETRIES + 1):
         try:
-            video_bytes = create_and_download_video(
+            video_bytes = generate_video_from_image(
                 prompt=current_prompt,
-                first_frame=first_frame,
-                last_frame=last_frame,
+                first_frame_url=first_frame_url,
                 duration=duration,
             )
-            log(f"Scene {scene_num} generated: {len(video_bytes)} bytes")
+            log(f"Scene 1 generated: {len(video_bytes)} bytes")
             return video_bytes
 
         except ModerationError as e:
             if attempt < MAX_MODERATION_RETRIES:
                 log(
-                    f"Scene {scene_num} MODERATION error (attempt {attempt + 1}/{MAX_MODERATION_RETRIES + 1}): {e}",
+                    f"Scene 1 MODERATION error (attempt {attempt + 1}/{MAX_MODERATION_RETRIES + 1}): {e}",
                     "WARNING",
                 )
                 # Try different sanitization strategies
@@ -101,20 +96,78 @@ def _generate_video_with_retry(
                 continue
             else:
                 log(
-                    f"Scene {scene_num} MODERATION error after {MAX_MODERATION_RETRIES + 1} attempts: {e}",
+                    f"Scene 1 MODERATION error after {MAX_MODERATION_RETRIES + 1} attempts: {e}",
                     "WARNING",
                 )
                 return None
 
         except Exception as e:
-            log(f"Scene {scene_num} generation failed: {e}", "ERROR")
+            log(f"Scene 1 generation failed: {e}", "ERROR")
+            return None
+
+    return None
+
+
+def _generate_scene2_with_retry(
+    prompt: str,
+    first_frame_url: str,
+    last_frame_url: str,
+    duration: int,
+) -> bytes | None:
+    """Generate Scene 2 video (interpolation) with retry logic for moderation errors.
+
+    Args:
+        prompt: Video generation prompt
+        first_frame_url: URL of the first frame (scene1 last frame)
+        last_frame_url: URL of the last frame (CTA frame)
+        duration: Video duration in seconds
+
+    Returns:
+        Video bytes or None if all retries failed
+    """
+    current_prompt = prompt
+    for attempt in range(MAX_MODERATION_RETRIES + 1):
+        try:
+            video_bytes = generate_video_interpolation(
+                prompt=current_prompt,
+                first_frame_url=first_frame_url,
+                last_frame_url=last_frame_url,
+                duration=duration,
+            )
+            log(f"Scene 2 generated: {len(video_bytes)} bytes")
+            return video_bytes
+
+        except ModerationError as e:
+            if attempt < MAX_MODERATION_RETRIES:
+                log(
+                    f"Scene 2 MODERATION error (attempt {attempt + 1}/{MAX_MODERATION_RETRIES + 1}): {e}",
+                    "WARNING",
+                )
+                # Try different sanitization strategies
+                if attempt == 0:
+                    log("Attempting quick sanitization (regex-based)...")
+                    current_prompt = quick_sanitize_names(current_prompt)
+                else:
+                    log("Attempting full sanitization (Gemini-based)...")
+                    current_prompt = sanitize_prompt_for_veo(current_prompt)
+                log("Retrying with sanitized prompt...")
+                continue
+            else:
+                log(
+                    f"Scene 2 MODERATION error after {MAX_MODERATION_RETRIES + 1} attempts: {e}",
+                    "WARNING",
+                )
+                return None
+
+        except Exception as e:
+            log(f"Scene 2 generation failed: {e}", "ERROR")
             return None
 
     return None
 
 
 def generate_scene1(state: VideoGeneratorState) -> dict:
-    """Generate Scene 1 video using Replicate Veo.
+    """Generate Scene 1 video using fal.ai Veo.
 
     Scene 1 (HOOK): image-to-video from first_frame (Nano Banana generated)
     - Video starts from the pre-generated first frame
@@ -129,27 +182,31 @@ def generate_scene1(state: VideoGeneratorState) -> dict:
         }
 
     seg = segments[0]
-    first_frame_image = state.get("first_frame_image")
+    first_frame_url = state.get("first_frame_url")
 
     log_separator("Scene 1/2 Generation (HOOK)")
 
     log(f"Title: {seg.get('title', '(no title)')}")
     log(f"Duration: {seg['seconds']}s")
     log("Strategy: Scene 1 - image-to-video (first_frame from Nano Banana)")
-    log(f"First frame (image): {'yes' if first_frame_image else 'no'}")
+    log(f"First frame URL: {'yes' if first_frame_url else 'no'}")
 
     log("Scene prompt (full):")
     print("-" * 40)
     print(seg["prompt"])
     print("-" * 40)
 
-    # Generate video
-    video_bytes = _generate_video_with_retry(
+    if not first_frame_url:
+        return {
+            "error": "No first_frame_url available for Scene 1",
+            "status": "scene1_failed",
+        }
+
+    # Generate video using URL directly (fal.ai accepts URLs)
+    video_bytes = _generate_scene1_with_retry(
         prompt=seg["prompt"],
-        first_frame=first_frame_image,
-        last_frame=None,
+        first_frame_url=first_frame_url,
         duration=seg["seconds"],
-        scene_num=1,
     )
 
     if not video_bytes:
@@ -160,27 +217,22 @@ def generate_scene1(state: VideoGeneratorState) -> dict:
         }
 
     # Extract last frame for Scene 2 continuity
-    scene1_last_frame = extract_last_frame_from_bytes(video_bytes)
+    scene1_last_frame_bytes = extract_last_frame_from_bytes(video_bytes)
     log("Scene 1 processing complete!")
 
-    # Build segment video data
-    segment_video: SegmentVideo = {
-        "video_bytes": video_bytes,
-        "index": 0,
-        "title": seg.get("title", "Scene 1"),
-    }
-
+    # Note: video_bytes and scene1_last_frame_bytes returned as bytes
+    # services.py will save to S3 and inject URLs for next node
     return {
-        "segment_videos": [segment_video],
-        "scene1_video_bytes": video_bytes,
-        "scene1_last_frame_image": scene1_last_frame,
+        "_scene1_video_bytes": video_bytes,  # Temporary: saved by services.py
+        "_scene1_last_frame_bytes": scene1_last_frame_bytes,  # Temporary: saved by services.py
+        "_scene1_title": seg.get("title", "Scene 1"),  # For segment record
         "current_segment_index": 1,
         "status": "scene1_complete",
     }
 
 
 def generate_scene2(state: VideoGeneratorState) -> dict:
-    """Generate Scene 2 video using Replicate Veo.
+    """Generate Scene 2 video using fal.ai Veo.
 
     Scene 2 (CTA): interpolation mode (image → last_frame)
     - Creates transition from scene1 end to product reveal
@@ -196,29 +248,34 @@ def generate_scene2(state: VideoGeneratorState) -> dict:
         }
 
     seg = segments[1]
-    scene1_last_frame = state.get("scene1_last_frame_image")
-    cta_last_frame = state.get("cta_last_frame_image")
+    scene1_last_frame_url = state.get("scene1_last_frame_url")
+    cta_last_frame_url = state.get("cta_last_frame_url")
 
     log_separator("Scene 2/2 Generation (CTA)")
 
     log(f"Title: {seg.get('title', '(no title)')}")
     log(f"Duration: {seg['seconds']}s")
     log("Strategy: Scene 2 - interpolation (scene1_last → cta_last with product)")
-    log(f"First frame (scene1_last): {'yes' if scene1_last_frame else 'no'}")
-    log(f"Last frame (cta_last): {'yes' if cta_last_frame else 'no'}")
+    log(f"First frame URL (scene1_last): {'yes' if scene1_last_frame_url else 'no'}")
+    log(f"Last frame URL (cta_last): {'yes' if cta_last_frame_url else 'no'}")
 
     log("Scene prompt (full):")
     print("-" * 40)
     print(seg["prompt"])
     print("-" * 40)
 
-    # Generate video with interpolation
-    video_bytes = _generate_video_with_retry(
+    if not scene1_last_frame_url or not cta_last_frame_url:
+        return {
+            "error": "Missing frame URLs for Scene 2 interpolation",
+            "status": "scene2_failed",
+        }
+
+    # Generate video with interpolation using URLs directly (fal.ai accepts URLs)
+    video_bytes = _generate_scene2_with_retry(
         prompt=seg["prompt"],
-        first_frame=scene1_last_frame,
-        last_frame=cta_last_frame,
+        first_frame_url=scene1_last_frame_url,
+        last_frame_url=cta_last_frame_url,
         duration=seg["seconds"],
-        scene_num=2,
     )
 
     if not video_bytes:
@@ -230,16 +287,11 @@ def generate_scene2(state: VideoGeneratorState) -> dict:
 
     log("Scene 2 processing complete!")
 
-    # Build segment video data
-    segment_video: SegmentVideo = {
-        "video_bytes": video_bytes,
-        "index": 1,
-        "title": seg.get("title", "Scene 2"),
-    }
-
+    # Note: video_bytes returned as bytes
+    # services.py will save to S3 and inject URL
     return {
-        "segment_videos": [segment_video],
-        "scene2_video_bytes": video_bytes,
+        "_scene2_video_bytes": video_bytes,  # Temporary: saved by services.py
+        "_scene2_title": seg.get("title", "Scene 2"),  # For segment record
         "current_segment_index": 2,
         "status": "scene2_complete",
     }

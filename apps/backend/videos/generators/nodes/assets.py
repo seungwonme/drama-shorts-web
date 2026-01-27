@@ -80,9 +80,11 @@ def prepare_first_frame(state: VideoGeneratorState) -> dict:
 
         log(f"Processed {len(processed_segments)} scenes")
 
+        # Note: first_frame_image is returned as bytes here
+        # services.py will save to S3 and inject first_frame_url for next node
         return {
             "segments": processed_segments,
-            "first_frame_image": first_frame_image,
+            "_first_frame_bytes": first_frame_image,  # Temporary: saved by services.py
             "current_segment_index": 0,
             "status": "first_frame_prepared",
         }
@@ -100,28 +102,28 @@ def prepare_first_frame(state: VideoGeneratorState) -> dict:
 def prepare_cta_frame(state: VideoGeneratorState) -> dict:
     """Prepare CTA last frame for Scene 2 interpolation (Step 2b).
 
-    Generates the CTA last frame using Nano Banana.
+    Generates the CTA last frame using fal.ai Nano Banana.
     This frame shows the product reveal for Scene 2's ending.
     """
     log_separator("Step 2b: CTA Frame Preparation")
 
-    scene1_last_frame = state.get("scene1_last_frame_image")
+    scene1_last_frame_url = state.get("scene1_last_frame_url")
     product_image_url = state.get("product_image_url")
     product_detail = state.get("product_detail", {})
     script_json = state.get("script_json", {})
     characters = script_json.get("characters", {})
 
-    if not scene1_last_frame:
-        log("No scene1_last_frame available - Scene 1 may have failed", "ERROR")
+    if not scene1_last_frame_url:
+        log("No scene1_last_frame_url available - Scene 1 may have failed", "ERROR")
         return {
-            "error": "No scene1_last_frame available for CTA frame generation",
+            "error": "No scene1_last_frame_url available for CTA frame generation",
             "status": "cta_frame_preparation_failed",
         }
 
     if not product_image_url:
         log("No product image URL - CTA frame will be skipped", "WARNING")
         return {
-            "cta_last_frame_image": None,
+            "_cta_last_frame_bytes": None,
             "status": "cta_frame_skipped",
         }
 
@@ -139,8 +141,9 @@ def prepare_cta_frame(state: VideoGeneratorState) -> dict:
                 log(f"CTA action from script: {cta_action[:100]}...")
 
         log("Generating CTA last frame with product image...")
-        cta_last_frame_image = generate_cta_last_frame(
-            scene1_last_frame=scene1_last_frame,
+        # fal.ai accepts URLs directly, no need to download and re-upload
+        cta_last_frame_bytes = generate_cta_last_frame(
+            scene1_last_frame_url=scene1_last_frame_url,
             product_image_url=product_image_url,
             product_detail=product_detail,
             characters=characters,
@@ -148,8 +151,10 @@ def prepare_cta_frame(state: VideoGeneratorState) -> dict:
         )
         log("CTA last frame generated successfully", "SUCCESS")
 
+        # Note: cta_last_frame returned as bytes
+        # services.py will save to S3 and inject cta_last_frame_url for next node
         return {
-            "cta_last_frame_image": cta_last_frame_image,
+            "_cta_last_frame_bytes": cta_last_frame_bytes,  # Temporary: saved by services.py
             "status": "cta_frame_prepared",
         }
 

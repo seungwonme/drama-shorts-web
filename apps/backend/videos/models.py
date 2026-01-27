@@ -1,6 +1,6 @@
 from django.db import models
 
-from .generators.constants import DEFAULT_VIDEO_STYLE, VideoStyle
+from .generators.prompts import DEFAULT_VIDEO_STYLE, VideoStyle
 
 
 # =============================================================================

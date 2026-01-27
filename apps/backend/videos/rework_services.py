@@ -10,11 +10,15 @@ from pathlib import Path
 from django.core.files.base import ContentFile
 
 from .generators.nodes.video_generator import extract_last_frame_from_bytes
+from .generators.services.fal_client import (
+    generate_video_from_image,
+    generate_video_interpolation,
+)
 from .generators.services.gemini_planner import (
     generate_cta_last_frame,
     generate_first_frame,
 )
-from .generators.services.replicate_client import create_and_download_video
+from .generators.utils.media import download_video_from_url
 from .generators.utils.video import concatenate_segments
 from .models import VideoGenerationJob, VideoSegment
 
@@ -56,9 +60,9 @@ def regenerate_first_frame(job: VideoGenerationJob) -> bytes:
 
 
 def regenerate_scene1(job: VideoGenerationJob) -> bytes:
-    """Regenerate Scene 1 video using Veo.
+    """Regenerate Scene 1 video using fal.ai Veo.
 
-    Requires: job.first_frame, job.segments[0].prompt
+    Requires: job.first_frame (URL), job.segments[0].prompt
     Updates: job.segments[0].video_file, job.scene1_last_frame
 
     Args:
@@ -79,15 +83,13 @@ def regenerate_scene1(job: VideoGenerationJob) -> bytes:
     if not segment.prompt:
         raise ValueError("Scene 1 segment prompt is required")
 
-    # Read first frame bytes
-    job.first_frame.seek(0)
-    first_frame_bytes = job.first_frame.read()
+    # fal.ai accepts URLs directly
+    first_frame_url = job.first_frame.url
 
     # Generate Scene 1 video (image-to-video mode)
-    video_bytes = create_and_download_video(
+    video_bytes = generate_video_from_image(
         prompt=segment.prompt,
-        first_frame=first_frame_bytes,
-        last_frame=None,
+        first_frame_url=first_frame_url,
         duration=segment.seconds or 8,
     )
 
@@ -113,9 +115,9 @@ def regenerate_scene1(job: VideoGenerationJob) -> bytes:
 
 
 def regenerate_cta_last_frame(job: VideoGenerationJob) -> bytes:
-    """Regenerate CTA last frame image using Nano Banana.
+    """Regenerate CTA last frame image using fal.ai Nano Banana.
 
-    Requires: job.scene1_last_frame, job.effective_product_image_url
+    Requires: job.scene1_last_frame (URL), job.effective_product_image_url
     Updates: job.cta_last_frame
 
     Args:
@@ -130,16 +132,15 @@ def regenerate_cta_last_frame(job: VideoGenerationJob) -> bytes:
     if not job.effective_product_image_url:
         raise ValueError("Product image URL is required to regenerate CTA last frame")
 
-    # Read scene1 last frame bytes
-    job.scene1_last_frame.seek(0)
-    scene1_last_bytes = job.scene1_last_frame.read()
+    # fal.ai accepts URLs directly
+    scene1_last_frame_url = job.scene1_last_frame.url
 
     # Get CTA action from script
     cta_action = _get_cta_action_from_script(job.script_json)
 
-    # Generate CTA last frame
+    # Generate CTA last frame (fal.ai accepts URLs directly)
     cta_last_bytes = generate_cta_last_frame(
-        scene1_last_frame=scene1_last_bytes,
+        scene1_last_frame_url=scene1_last_frame_url,
         product_image_url=job.effective_product_image_url,
         product_detail=job.product_detail or {},
         characters=job.script_json.get("characters", {}) if job.script_json else {},
@@ -157,9 +158,9 @@ def regenerate_cta_last_frame(job: VideoGenerationJob) -> bytes:
 
 
 def regenerate_scene2(job: VideoGenerationJob) -> bytes:
-    """Regenerate Scene 2 video using Veo interpolation mode.
+    """Regenerate Scene 2 video using fal.ai Veo interpolation mode.
 
-    Requires: job.scene1_last_frame, job.cta_last_frame, job.segments[1].prompt
+    Requires: job.scene1_last_frame (URL), job.cta_last_frame (URL), job.segments[1].prompt
     Updates: job.segments[1].video_file
 
     Args:
@@ -183,18 +184,15 @@ def regenerate_scene2(job: VideoGenerationJob) -> bytes:
     if not segment.prompt:
         raise ValueError("Scene 2 segment prompt is required")
 
-    # Read frame bytes
-    job.scene1_last_frame.seek(0)
-    scene1_last_bytes = job.scene1_last_frame.read()
-
-    job.cta_last_frame.seek(0)
-    cta_last_bytes = job.cta_last_frame.read()
+    # fal.ai accepts URLs directly
+    scene1_last_frame_url = job.scene1_last_frame.url
+    cta_last_frame_url = job.cta_last_frame.url
 
     # Generate Scene 2 video (interpolation mode)
-    video_bytes = create_and_download_video(
+    video_bytes = generate_video_interpolation(
         prompt=segment.prompt,
-        first_frame=scene1_last_bytes,  # image parameter
-        last_frame=cta_last_bytes,  # interpolation to this frame
+        first_frame_url=scene1_last_frame_url,
+        last_frame_url=cta_last_frame_url,
         duration=segment.seconds or 8,
     )
 
@@ -212,7 +210,7 @@ def regenerate_scene2(job: VideoGenerationJob) -> bytes:
 def regenerate_final_video(job: VideoGenerationJob) -> bytes:
     """Regenerate final video by concatenating all segments.
 
-    Requires: job.segments with video_file
+    Requires: job.segments with video_file (URLs)
     Updates: job.final_video
 
     Args:
@@ -227,13 +225,14 @@ def regenerate_final_video(job: VideoGenerationJob) -> bytes:
     if not segments.exists():
         raise ValueError("No segment videos found to concatenate")
 
-    # Write segment videos to temp files
+    # Download and write segment videos to temp files
     temp_paths = []
     try:
         for seg in segments:
             temp_path = Path(tempfile.gettempdir()) / f"segment_{seg.segment_index:02d}.mp4"
-            seg.video_file.seek(0)
-            temp_path.write_bytes(seg.video_file.read())
+            # Download from URL
+            video_bytes = download_video_from_url(seg.video_file.url)
+            temp_path.write_bytes(video_bytes)
             temp_paths.append(temp_path)
 
         # Output path

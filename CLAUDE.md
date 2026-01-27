@@ -46,13 +46,13 @@ drama-shorts-web/
 │   │   ├── rework_services.py    # 단계별 재작업 서비스 (첫 프레임, Scene 1/2, CTA, 병합)
 │   │   └── generators/           # 영상 생성 패키지 (구 drama-shorts)
 │   │       ├── graph.py          # LangGraph 워크플로우 정의
-│   │       ├── state.py          # VideoGeneratorState (bytes 기반)
+│   │       ├── state.py          # VideoGeneratorState (URL 기반)
 │   │       ├── config.py         # API 키, 모델 설정
 │   │       ├── constants.py      # 시스템 프롬프트
 │   │       ├── exceptions.py     # ModerationError
 │   │       ├── nodes/            # plan_script, prepare_first_frame, prepare_cta_frame, generate_scene1, generate_scene2, concatenate_videos
-│   │       ├── services/         # gemini_planner.py, replicate_client.py
-│   │       ├── utils/            # logging.py, video.py
+│   │       ├── services/         # gemini_planner.py, fal_client.py
+│   │       ├── utils/            # logging.py, video.py, media.py
 │   │       └── assets/           # last-cta.png, sound-effect.wav
 │   ├── scripts/                  # init.py, create_superuser.py
 │   ├── Dockerfile.dev            # 개발 이미지 (시스템 deps: ffmpeg, libgl 등)
@@ -66,31 +66,27 @@ drama-shorts-web/
 
 ### Django → generators 연동
 
-`videos/services.py`에서 로컬 generators 패키지를 직접 임포트:
+`videos/services.py`에서 노드 함수를 직접 임포트하여 순차 실행:
 
 ```python
 # services.py의 핵심 로직
-from .generators.graph import graph
-final_state = graph.invoke({
-    "topic": job.topic,
-    "script": job.script,
-    "product_image_url": job.effective_product_image_url,
-})
+from .generators.nodes import plan_script, prepare_first_frame, generate_scene1, ...
 
-# bytes를 Django FileField에 직접 저장 (S3 자동 업로드)
-if final_state.get("final_video_bytes"):
-    job.final_video.save(
-        f"job_{job.id}_final.mp4",
-        ContentFile(final_state["final_video_bytes"])
-    )
+# 노드 순차 실행 (URL 기반)
+for node_name in NODE_ORDER:
+    result = NODE_FUNCTIONS[node_name](current_state)
+    # bytes를 S3에 저장하고 URL을 state에 주입
+    current_state = _save_and_inject_urls(job, node_name, result, current_state)
 ```
+
+**URL 기반 state**: 노드 간 데이터 전달 시 bytes 대신 S3 URL 사용. 노드는 필요시 URL에서 다운로드하여 사용.
 
 ### 영상 생성 워크플로우 (7단계)
 
 ```
-plan_script (Gemini) → prepare_first_frame (Nano Banana 첫 프레임)
-    → generate_scene1 (Veo Scene 1) → prepare_cta_frame (Nano Banana CTA 프레임)
-    → generate_scene2 (Veo Scene 2 interpolation) → concatenate_videos (병합 + 효과음)
+plan_script (Gemini) → prepare_first_frame (fal.ai Nano Banana 첫 프레임)
+    → generate_scene1 (fal.ai Veo Scene 1) → prepare_cta_frame (fal.ai Nano Banana CTA 프레임)
+    → generate_scene2 (fal.ai Veo Scene 2 interpolation) → concatenate_videos (병합 + 효과음)
     → final_video_bytes
 ```
 
@@ -100,7 +96,7 @@ plan_script (Gemini) → prepare_first_frame (Nano Banana 첫 프레임)
 - **Scene 2 (8초)**: 반전 + 제품 등장 (interpolation 모드)
 - **Last CTA (2초)**: 정적 이미지 + 효과음
 
-### State 구조 (bytes 기반)
+### State 구조 (URL 기반)
 
 ```python
 class VideoGeneratorState(TypedDict):
@@ -109,19 +105,21 @@ class VideoGeneratorState(TypedDict):
     script: str | None
     product_image_url: str | None
 
-    # 프레임 이미지 (bytes)
-    first_frame_image: bytes | None
-    scene1_last_frame_image: bytes | None
-    cta_last_frame_image: bytes | None
+    # 프레임 이미지 (S3 URL)
+    first_frame_url: str | None        # Scene 1 시작 프레임
+    scene1_last_frame_url: str | None  # Scene 1 마지막 프레임
+    cta_last_frame_url: str | None     # CTA 마지막 프레임
 
-    # 생성된 세그먼트 (bytes)
-    segment_videos: list[SegmentVideo]  # [{video_bytes, index, title}]
-    scene1_video_bytes: bytes | None  # 즉시 저장용
-    scene2_video_bytes: bytes | None  # 즉시 저장용
+    # 생성된 세그먼트 (S3 URL)
+    segment_videos: list[SegmentVideo]  # [{video_url, index, title}]
+    scene1_video_url: str | None
+    scene2_video_url: str | None
 
-    # 최종 출력 (bytes)
-    final_video_bytes: bytes | None
+    # 최종 출력 (S3 URL)
+    final_video_url: str | None
 ```
+
+**노드 내부 동작**: 노드는 URL에서 bytes를 다운로드(`utils/media.py`)하여 처리 후, 임시 bytes 필드(`_first_frame_bytes` 등)로 반환. `services.py`에서 S3 저장 후 URL을 state에 주입.
 
 ## Videos 앱 모델
 
@@ -144,8 +142,8 @@ DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_EMAIL, DJANGO_SUPERUSER_PASSWORD
 AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_STORAGE_BUCKET_NAME, AWS_S3_REGION_NAME
 
 # 영상 생성 API (필수)
-GEMINI_API_KEY      # Gemini AI (스크립트 기획, 이미지 생성)
-REPLICATE_API_TOKEN # Veo 영상 생성
+GEMINI_API_KEY      # Gemini AI (스크립트 기획)
+FAL_KEY             # fal.ai (Nano Banana 이미지 생성, Veo 영상 생성)
 ```
 
 ## Admin 사용법

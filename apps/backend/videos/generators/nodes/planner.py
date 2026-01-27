@@ -1,6 +1,6 @@
 """Planner node - generates scene script JSON using Gemini AI."""
 
-from ..constants import DEFAULT_VIDEO_STYLE
+from ..prompts import DEFAULT_VIDEO_STYLE
 from ..services.gemini_planner import plan_script_with_ai
 from ..state import CharacterDetail, ProductDetail, VideoGeneratorState
 from ..utils.logging import log, log_separator

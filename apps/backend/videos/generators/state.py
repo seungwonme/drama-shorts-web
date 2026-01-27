@@ -3,7 +3,7 @@
 import operator
 from typing import Annotated, Any, TypedDict
 
-from .constants import DEFAULT_VIDEO_STYLE, VideoStyle
+from .prompts import DEFAULT_VIDEO_STYLE, VideoStyle
 
 
 class SegmentData(TypedDict):
@@ -33,7 +33,7 @@ class ProductDetail(TypedDict):
 class SegmentVideo(TypedDict):
     """Generated video segment data."""
 
-    video_bytes: bytes
+    video_url: str  # S3 URL (replaced video_bytes)
     index: int
     title: str
 
@@ -65,33 +65,33 @@ class VideoGeneratorState(TypedDict):
     # Asset preparation results (from prepare_assets node)
     segments: list[SegmentData]
 
-    # Frame images for new workflow:
+    # Frame image URLs (S3 URLs, injected by services.py after saving)
     # Step 1: Nano Banana generates first frame with both characters
     # Step 2: Veo generates Scene 1 (image=first_frame) → extract last frame
     # Step 3: Nano Banana generates CTA last frame (scene1_last + product)
     # Step 4: Veo generates Scene 2 (image=scene1_last, last_frame=cta_last)
-    first_frame_image: bytes | None  # Scene 1 starting frame (both characters)
-    cta_last_frame_image: bytes | None  # Scene 2 ending frame (with product)
+    first_frame_url: str | None  # Scene 1 starting frame (both characters)
+    cta_last_frame_url: str | None  # Scene 2 ending frame (with product)
 
     # Current processing state
     current_segment_index: int
 
-    # Generated video segments as bytes (uses reducer for accumulation)
-    # Each tuple: (video_bytes, metadata_dict)
+    # Generated video segments (uses reducer for accumulation)
+    # Each SegmentVideo contains video_url (S3 URL)
     segment_videos: Annotated[list[SegmentVideo], operator.add]
 
-    # Individual scene video bytes (for incremental saving)
-    scene1_video_bytes: bytes | None  # Scene 1 영상 (즉시 저장용)
-    scene2_video_bytes: bytes | None  # Scene 2 영상 (즉시 저장용)
+    # Individual scene video URLs (S3 URLs, for dependency tracking)
+    scene1_video_url: str | None  # Scene 1 영상 URL
+    scene2_video_url: str | None  # Scene 2 영상 URL
 
-    # Last frame image for scene continuity
-    scene1_last_frame_image: bytes | None  # Last frame of Scene 1 for Scene 2 start
+    # Last frame image URL for scene continuity
+    scene1_last_frame_url: str | None  # Last frame of Scene 1 for Scene 2 start
 
     # Skipped segments due to errors (uses reducer for accumulation)
     skipped_segments: Annotated[list[int], operator.add]
 
-    # Final output as bytes
-    final_video_bytes: bytes | None
+    # Final output URL (S3 URL)
+    final_video_url: str | None
 
     # Error handling
     error: str | None

@@ -1,20 +1,19 @@
 """Gemini API client for prompt planning and character image generation."""
 
-import io
 import json
 from typing import Any
 
-import replicate
+import fal_client
 import requests
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
-from ..config import GEMINI_API_KEY, PLANNER_MODEL, REPLICATE_IMAGE_MODEL
-from ..constants import (
+from ..config import FAL_IMAGE_EDIT_MODEL, FAL_IMAGE_MODEL, GEMINI_API_KEY, PLANNER_MODEL
+from ..prompts import (
+    CTA_FRAME_PROMPT,
     DEFAULT_VIDEO_STYLE,
-    KOREAN_DRAMA_SYSTEM_PROMPT,
-    SCRIPT_MODE_SYSTEM_PROMPT,
+    FIRST_FRAME_PROMPT,
     VideoStyle,
     get_auto_system_prompt,
     get_script_system_prompt,
@@ -129,50 +128,6 @@ class ScriptOutput(BaseModel):
 _llm: ChatGoogleGenerativeAI | None = None
 
 
-def _normalize_script_data(data: dict, base_prompt: str) -> dict:
-    """Normalize fallback JSON data to match expected schema.
-
-    Handles cases where Gemini returns slightly different structures:
-    - product as string instead of object
-    - characters as array instead of object with character_a/character_b keys
-    """
-    # Normalize product
-    product = data.get("product")
-    if isinstance(product, str):
-        data["product"] = {
-            "name": product,
-            "description": base_prompt,
-            "key_benefit": "See product details",
-        }
-
-    # Normalize characters (array -> object)
-    characters = data.get("characters")
-    if isinstance(characters, list) and len(characters) >= 2:
-        data["characters"] = {
-            "character_a": {
-                "name": characters[0].get("name", "Character A"),
-                "description": characters[0].get("appearance", characters[0].get("description", "")),
-            },
-            "character_b": {
-                "name": characters[1].get("name", "Character B"),
-                "description": characters[1].get("appearance", characters[1].get("description", "")),
-            },
-        }
-    elif isinstance(characters, list) and len(characters) == 1:
-        data["characters"] = {
-            "character_a": {
-                "name": characters[0].get("name", "Character A"),
-                "description": characters[0].get("appearance", characters[0].get("description", "")),
-            },
-            "character_b": {
-                "name": "Character B",
-                "description": "Secondary character",
-            },
-        }
-
-    return data
-
-
 def get_planner_llm() -> ChatGoogleGenerativeAI:
     """Get or create LangChain Gemini LLM for planning (LangSmith tracing enabled)."""
     global _llm
@@ -270,58 +225,10 @@ def plan_script_with_ai(
         HumanMessage(content=user_input),
     ]
 
-    # Try structured output first, fallback to raw parsing
-    try:
-        log("Using structured output with Pydantic schema...")
-        structured_llm = llm.with_structured_output(ScriptOutput)
-        result: ScriptOutput = structured_llm.invoke(messages)
-        data = result.model_dump()
-    except Exception as struct_error:
-        log(f"Structured output failed: {struct_error}", "WARNING")
-        log("Falling back to raw JSON parsing...")
-
-        # Fallback: get raw response and parse manually
-        raw_response = llm.invoke(messages)
-        raw_content = raw_response.content
-
-        # Handle case where content is a list (e.g., [{'type': 'text', 'text': '...'}] or content blocks)
-        # Note: langchain_google_genai may return content block objects, not plain dicts
-        if not isinstance(raw_content, str):
-            text_parts = []
-            try:
-                for item in raw_content:
-                    # Try dict access first
-                    if isinstance(item, dict):
-                        if item.get("type") == "text":
-                            text_parts.append(item.get("text", ""))
-                    # Try object attribute access (for content block objects)
-                    elif hasattr(item, "text"):
-                        text_parts.append(str(item.text))
-                    # Try direct string conversion
-                    elif isinstance(item, str):
-                        text_parts.append(item)
-            except (TypeError, AttributeError):
-                pass  # Not iterable or other issue
-            raw_content = "".join(text_parts) if text_parts else str(raw_content)
-
-        log(f"Raw response (first 500 chars): {raw_content[:500]}")
-
-        # Try to extract JSON from response
-        import re
-        json_match = re.search(r'\{[\s\S]*\}', raw_content)
-        if json_match:
-            try:
-                data = json.loads(json_match.group())
-                log("Successfully parsed JSON from raw response")
-            except json.JSONDecodeError as e:
-                log(f"JSON parse error: {e}", "ERROR")
-                raise
-        else:
-            log("No JSON found in response", "ERROR")
-            raise ValueError("No valid JSON in response")
-
-        # Normalize data to match expected schema
-        data = _normalize_script_data(data, base_prompt)
+    log("Using structured output with Pydantic schema...")
+    structured_llm = llm.with_structured_output(ScriptOutput)
+    result: ScriptOutput = structured_llm.invoke(messages)
+    data = result.model_dump()
 
     log("Structured output received:")
     print("-" * 40)
@@ -344,7 +251,7 @@ def generate_first_frame(
     characters: dict[str, Any],
     scene_setting: dict[str, Any],
 ) -> bytes:
-    """Generate first frame with both characters together using Nano Banana.
+    """Generate first frame with both characters together using fal.ai Nano Banana.
 
     Args:
         characters: Character data from planning (character_a, character_b)
@@ -353,9 +260,9 @@ def generate_first_frame(
     Returns:
         Image bytes
     """
-    log_separator("First Frame Generation (Nano Banana)")
+    log_separator("First Frame Generation (fal.ai)")
 
-    log(f"Model: {REPLICATE_IMAGE_MODEL}")
+    log(f"Model: {FAL_IMAGE_MODEL}")
 
     # Build character descriptions
     char_a = characters.get("character_a", {})
@@ -369,41 +276,37 @@ def generate_first_frame(
     location = scene_setting.get("location", "luxurious living room")
     lighting = scene_setting.get("lighting", "dramatic lighting")
 
-    # Create scene prompt with both characters
-    # IMPORTANT: Explicitly state this is a SINGLE scene, not split screen
-    prompt = (
-        f"A SINGLE continuous photorealistic scene (NOT a split screen, NOT a collage, NOT multiple panels). "
-        f"Cinematic Korean drama moment in 9:16 portrait format for YouTube Shorts. "
-        f"Setting: {location}. Lighting: {lighting}. "
-        f"Two KOREAN people standing together in ONE unified scene: "
-        f"On the LEFT - {char_a_name}: {char_a_desc}. "
-        f"On the RIGHT - {char_b_name}: {char_b_desc}. "
-        f"Both characters MUST be ethnically Korean with East Asian features. "
-        f"They are facing each other in a dramatic confrontation pose. "
-        f"Korean drama style cinematography, high quality, photorealistic, 4K resolution. "
-        f"This is ONE single image with ONE continuous background, not divided into sections."
+    prompt = FIRST_FRAME_PROMPT.format(
+        char_a_name=char_a_name,
+        char_a_desc=char_a_desc,
+        char_b_name=char_b_name,
+        char_b_desc=char_b_desc,
+        location=location,
+        lighting=lighting,
     )
 
     log(f"Prompt: {prompt[:200]}...")
 
     try:
-        output = replicate.run(
-            REPLICATE_IMAGE_MODEL,
-            input={
+        result = fal_client.subscribe(
+            FAL_IMAGE_MODEL,
+            arguments={
                 "prompt": prompt,
                 "aspect_ratio": "9:16",
                 "output_format": "png",
             },
+            with_logs=True,
         )
 
-        # Handle FileOutput or URL response
-        if hasattr(output, "read"):
-            image_bytes = output.read()
-        else:
-            log(f"Downloading image from: {str(output)[:60]}...")
-            response = requests.get(str(output), timeout=60)
-            response.raise_for_status()
-            image_bytes = response.content
+        images = result.get("images", [])
+        if not images:
+            raise ValueError(f"No images in response: {result}")
+
+        image_url = images[0].get("url")
+        log(f"Downloading image from: {image_url[:60]}...")
+        response = requests.get(image_url, timeout=60)
+        response.raise_for_status()
+        image_bytes = response.content
 
         log(f"First frame generated: {len(image_bytes)} bytes", "SUCCESS")
 
@@ -415,7 +318,7 @@ def generate_first_frame(
 
 
 def generate_cta_last_frame(
-    scene1_last_frame: bytes,
+    scene1_last_frame_url: str,
     product_image_url: str,
     product_detail: dict[str, Any],
     characters: dict[str, Any],
@@ -423,11 +326,11 @@ def generate_cta_last_frame(
 ) -> bytes:
     """Generate CTA last frame by compositing scene1 last frame with product.
 
-    Uses Nano Banana with multiple reference images to create a natural
+    Uses fal.ai Nano Banana edit mode with multiple reference images to create a natural
     product placement scene that maintains character continuity.
 
     Args:
-        scene1_last_frame: Last frame from Scene 1 as bytes
+        scene1_last_frame_url: URL of the last frame from Scene 1
         product_image_url: URL of the product image
         product_detail: Product information (name, description, key_benefit)
         characters: Character data for context
@@ -436,29 +339,14 @@ def generate_cta_last_frame(
     Returns:
         Image bytes
     """
-    log_separator("CTA Last Frame Generation (Nano Banana)")
+    log_separator("CTA Frame Generation (fal.ai)")
 
-    log(f"Model: {REPLICATE_IMAGE_MODEL}")
-    log(f"Product image URL: {product_image_url}")
-
-    # Upload scene1 last frame to Replicate to get URL
-    log("Uploading scene1 last frame to Replicate...")
-    scene1_file = replicate.files.create(io.BytesIO(scene1_last_frame))
-    scene1_frame_url = scene1_file.urls.get("get")
-    log(f"Scene1 last frame URL: {scene1_frame_url[:60]}...")
-
-    # Download and upload product image to Replicate (external URLs can cause E6716 error)
-    log("Downloading and uploading product image to Replicate...")
-    product_response = requests.get(product_image_url, timeout=60)
-    product_response.raise_for_status()
-    product_file = replicate.files.create(io.BytesIO(product_response.content))
-    product_replicate_url = product_file.urls.get("get")
-    log(f"Product image URL (Replicate): {product_replicate_url[:60]}...")
+    log(f"Model: {FAL_IMAGE_EDIT_MODEL}")
+    log(f"Scene1 last frame URL: {scene1_last_frame_url[:60]}...")
+    log(f"Product image URL: {product_image_url[:60]}...")
 
     # Build product description
     product_name = product_detail.get("name", "product")
-    product_desc = product_detail.get("description", "")
-    key_benefit = product_detail.get("key_benefit", "")
 
     # Get character info for context
     char_a = characters.get("character_a", {})
@@ -466,57 +354,42 @@ def generate_cta_last_frame(
     char_a_name = char_a.get("name", "Character A")
     char_b_name = char_b.get("name", "Character B")
 
-    # Build action description from script
-    if cta_action:
-        action_desc = f"Scene context: {cta_action} "
-    else:
-        action_desc = "The characters react with surprised, amused expressions. "
-
-    # Create prompt for LAST FRAME only
-    # Note: This is the END FRAME for Veo interpolation.
-    # The video BETWEEN frames can have crowds cheering, dramatic reactions, etc.
-    # But this FINAL FRAME should have subtle product placement to avoid content filter.
-    prompt = (
-        f"A SINGLE continuous photorealistic scene (NOT a split screen, NOT a collage). "
-        f"Korean drama comedic twist ending - the FINAL MOMENT of reconciliation. "
-        f"IMPORTANT: Keep the EXACT SAME two characters ({char_a_name} and {char_b_name}) from the first reference image. "
-        f"Their faces, clothing, and appearances must remain identical. "
-        f"{action_desc}"
-        f"The two main characters have amused, surprised expressions - this is the punchline moment. "
-        f"PRODUCT PLACEMENT: The product from the SECOND reference image ('{product_name}') appears naturally in the scene - "
-        f"on a table nearby, casually in one character's hand, or visible in the background. "
-        f"The product is part of the scene, not presented to camera like an advertisement. "
-        f"NOTE: This is the final frame. The VIDEO leading up to this can include crowd reactions, "
-        f"dramatic reveals, and comedic buildup - but this ending frame shows the calm after the storm. "
-        f"9:16 portrait format. "
-        f"Warm, golden lighting. Comedic Korean drama atmosphere. "
-        f"High quality, photorealistic, 4K resolution."
+    action_desc = (
+        f"Scene context: {cta_action} "
+        if cta_action
+        else "The characters react with surprised, amused expressions. "
+    )
+    prompt = CTA_FRAME_PROMPT.format(
+        char_a_name=char_a_name,
+        char_b_name=char_b_name,
+        product_name=product_name,
+        action_desc=action_desc,
     )
 
     log(f"Prompt: {prompt[:200]}...")
 
     try:
-        # Use BOTH scene1 last frame AND product image as references
-        # Both must be Replicate URLs to avoid E6716 error
-        input_params = {
-            "prompt": prompt,
-            "aspect_ratio": "9:16",
-            "output_format": "png",
-            "image_input": [scene1_frame_url, product_replicate_url],
-        }
+        # Use fal.ai edit model with image_urls for reference images
+        result = fal_client.subscribe(
+            FAL_IMAGE_EDIT_MODEL,
+            arguments={
+                "prompt": prompt,
+                "image_urls": [scene1_last_frame_url, product_image_url],
+                "aspect_ratio": "9:16",
+                "output_format": "png",
+            },
+            with_logs=True,
+        )
 
-        log(f"Using {len(input_params['image_input'])} reference images (both Replicate URLs)")
+        images = result.get("images", [])
+        if not images:
+            raise ValueError(f"No images in response: {result}")
 
-        output = replicate.run(REPLICATE_IMAGE_MODEL, input=input_params)
-
-        # Handle FileOutput or URL response
-        if hasattr(output, "read"):
-            image_bytes = output.read()
-        else:
-            log(f"Downloading image from: {str(output)[:60]}...")
-            response = requests.get(str(output), timeout=60)
-            response.raise_for_status()
-            image_bytes = response.content
+        image_url = images[0].get("url")
+        log(f"Downloading image from: {image_url[:60]}...")
+        response = requests.get(image_url, timeout=60)
+        response.raise_for_status()
+        image_bytes = response.content
 
         log(f"CTA last frame generated: {len(image_bytes)} bytes", "SUCCESS")
 

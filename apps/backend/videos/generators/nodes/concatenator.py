@@ -5,6 +5,7 @@ from pathlib import Path
 
 from ..state import VideoGeneratorState
 from ..utils.logging import log, log_separator
+from ..utils.media import download_video_from_url
 from ..utils.video import concatenate_segments
 
 
@@ -33,9 +34,13 @@ def concatenate_videos(state: VideoGeneratorState) -> dict:
     segment_videos = sorted(segment_videos, key=lambda x: x["index"])
 
     if len(segment_videos) == 1:
-        log("Only one segment generated, using as final video")
+        log("Only one segment generated, downloading and using as final video")
+        video_url = segment_videos[0]["video_url"]
+        video_bytes = download_video_from_url(video_url)
+        # Note: _final_video_bytes returned as bytes
+        # services.py will save to S3 and inject final_video_url
         return {
-            "final_video_bytes": segment_videos[0]["video_bytes"],
+            "_final_video_bytes": video_bytes,  # Temporary: saved by services.py
             "status": "complete",
         }
 
@@ -43,11 +48,13 @@ def concatenate_videos(state: VideoGeneratorState) -> dict:
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_dir_path = Path(temp_dir)
 
-        # Write segment bytes to temporary files
+        # Download and write segment videos to temporary files
         temp_paths = []
         for i, seg_video in enumerate(segment_videos):
             temp_path = temp_dir_path / f"segment_{i:02d}.mp4"
-            temp_path.write_bytes(seg_video["video_bytes"])
+            log(f"Downloading segment {i+1} from URL: {seg_video['video_url'][:60]}...")
+            video_bytes = download_video_from_url(seg_video["video_url"])
+            temp_path.write_bytes(video_bytes)
             temp_paths.append(temp_path)
             log(f"Temp segment {i+1}: {temp_path}")
 
@@ -64,7 +71,9 @@ def concatenate_videos(state: VideoGeneratorState) -> dict:
         final_bytes = output_path.read_bytes()
         log(f"Final video size: {len(final_bytes)} bytes")
 
+    # Note: _final_video_bytes returned as bytes
+    # services.py will save to S3 and inject final_video_url
     return {
-        "final_video_bytes": final_bytes,
+        "_final_video_bytes": final_bytes,  # Temporary: saved by services.py
         "status": "complete",
     }
