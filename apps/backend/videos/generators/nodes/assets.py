@@ -7,13 +7,38 @@ from ..state import SegmentData, VideoGeneratorState
 from ..utils.logging import log, log_separator
 
 
-def scene_to_prompt(scene: dict) -> str:
-    """Convert scene JSON to Veo prompt string.
+def scene_to_prompt(
+    scene: dict,
+    product: dict | None = None,
+    characters: list | None = None,
+) -> str:
+    """Convert scene JSON to Veo prompt string with full context.
 
-    Simply serializes the PROMPT_TEMPLATE JSON structure directly.
-    Veo can parse and understand the structured JSON format.
+    Combines product, characters, and scene information into a single
+    prompt that Veo can understand and use for video generation.
+
+    Args:
+        scene: Scene data (scene_setting, camera_setup, mood_style, audio, timeline)
+        product: Product information (name, description, key_benefit)
+        characters: Character definitions list (id, name, appearance, clothing, etc.)
+
+    Returns:
+        JSON string containing full context for Veo
     """
-    return json.dumps(scene, ensure_ascii=False, indent=2)
+    prompt_data = {}
+
+    # Include product info for context (especially for Scene 2 product placement)
+    if product:
+        prompt_data["product"] = product
+
+    # Include character definitions for consistency
+    if characters:
+        prompt_data["characters"] = characters
+
+    # Include scene-specific data
+    prompt_data["scene"] = scene
+
+    return json.dumps(prompt_data, ensure_ascii=False, indent=2)
 
 
 def prepare_first_frame(state: VideoGeneratorState) -> dict:
@@ -35,32 +60,43 @@ def prepare_first_frame(state: VideoGeneratorState) -> dict:
 
     try:
         # === Step 1: Generate first frame with both characters ===
-        characters_data = script_json.get("characters", {})
+        characters_data = script_json.get("characters", [])
+        product_data = script_json.get("product", {})
         raw_scenes = script_json.get("scenes", [])
 
         first_frame_image = None
         if characters_data and raw_scenes:
-            # Get scene setting from first scene for context
+            # Get scene setting and first sequence from first scene
             first_scene = raw_scenes[0]
             scene_setting = first_scene.get("scene_setting", {})
+            timeline = first_scene.get("timeline", [])
+            first_sequence = timeline[0] if timeline else None
 
             log("Generating first frame with both characters...")
-            first_frame_image = generate_first_frame(characters_data, scene_setting)
+            log(f"First sequence: {first_sequence.get('camera', 'N/A') if first_sequence else 'N/A'}")
+            first_frame_image = generate_first_frame(
+                characters=characters_data,
+                scene_setting=scene_setting,
+                first_sequence=first_sequence,
+            )
             log("First frame generated successfully", "SUCCESS")
 
         # === Step 2: Convert scene JSON to prompts ===
         processed_segments: list[SegmentData] = []
 
         log_separator("Preparing Scene JSON Prompts")
-        log("Strategy: JSON structure passed directly to Veo")
+        log("Strategy: JSON structure with product + characters + scene passed to Veo")
 
         for idx, scene in enumerate(raw_scenes):
             scene_num = idx + 1
-            metadata = scene.get("metadata", {})
-            prompt_name = metadata.get("prompt_name", f"Scene {scene_num}")
+            prompt_name = f"Scene {scene_num}"
 
-            # Convert JSON to prompt string
-            prompt = scene_to_prompt(scene)
+            # Convert JSON to prompt string with full context
+            prompt = scene_to_prompt(
+                scene=scene,
+                product=product_data,
+                characters=characters_data,
+            )
 
             # Fixed 8 seconds per scene (Veo API supports 4, 6, 8 only)
             seconds = 8

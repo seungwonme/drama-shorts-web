@@ -175,9 +175,7 @@ class VideoGenerationJob(models.Model):
         """영상 스타일 선택"""
 
         MAKJANG_DRAMA = VideoStyle.MAKJANG_DRAMA.value, "B급 막장 드라마"
-        # 추후 확장:
-        # ROMANTIC_COMEDY = VideoStyle.ROMANTIC_COMEDY.value, "로맨틱 코미디"
-        # EMOTIONAL = VideoStyle.EMOTIONAL.value, "감동/힐링"
+        LOTTERIA_STORY = VideoStyle.LOTTERIA_STORY.value, "롯데리아형 스토리"
 
     # 입력
     topic = models.CharField("주제", max_length=200, help_text="광고할 제품/서비스")

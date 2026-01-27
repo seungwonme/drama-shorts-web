@@ -27,102 +27,196 @@ from ..utils.logging import log, log_separator
 class Product(BaseModel):
     """Product information for the ad."""
 
-    name: str = Field(description="Product/service name")
-    description: str = Field(description="What it does")
-    key_benefit: str = Field(description="Main selling point")
-
-
-class CharacterDefinition(BaseModel):
-    """Character definition for image generation."""
-
-    name: str = Field(description="Korean name")
+    name: str = Field(description="Product/service name in Korean (e.g., '대모산 사주 강의', '비타민C 세럼')")
     description: str = Field(
-        description="Detailed physical description in English - age, hair, clothing, distinctive features"
+        description="What the product/service does in English (e.g., 'Online fortune telling course teaching compatibility reading')"
+    )
+    key_benefit: str = Field(
+        description="Main selling point that resolves the drama conflict (e.g., 'Learn to read compatibility yourself')"
     )
 
 
-class Characters(BaseModel):
-    """All characters in the video."""
+class CharacterDefinition(BaseModel):
+    """Character definition - unchanging attributes for consistency across scenes."""
 
-    character_a: CharacterDefinition = Field(description="First character (usually antagonist)")
-    character_b: CharacterDefinition = Field(description="Second character (usually protagonist)")
+    id: str = Field(description="Unique identifier: 'A' for antagonist/authority figure, 'B' for protagonist/younger character")
+    name: str = Field(description="Korean full name with surname (e.g., '김순자', '박지은')")
+    gender: str = Field(description="Gender: 'female' or 'male'")
+    age: str = Field(
+        description="Specific age range (e.g., 'late 50s', 'early 30s', 'mid 20s') - be precise for AI image generation"
+    )
+    appearance: str = Field(
+        description="""VERY DETAILED physical description in English. Must include ALL of:
+- Height (e.g., '162cm', '175cm')
+- Build (e.g., 'slim', 'athletic', 'stocky')
+- Skin tone and texture (e.g., 'fair skin with visible age spots', 'tan complexion')
+- Hair style, color, length (e.g., 'dyed jet-black hair pulled into tight bun with jade hairpin')
+- Facial features (e.g., 'sharp angular face, thin lips, deep-set eyes with crow's feet')
+- Distinguishing marks if any"""
+    )
+    clothing: str = Field(
+        description="""VERY DETAILED clothing description in English. Must include ALL of:
+- Main outfit with specific colors and materials (e.g., 'expensive deep purple silk hanbok')
+- Patterns/embroidery details (e.g., 'intricate gold embroidery on collar')
+- Accessories (e.g., 'jade bangle bracelet, small pearl earrings')
+- Posture hints (e.g., 'stands with impeccable posture, chin slightly raised')"""
+    )
+    voice: str = Field(
+        default="",
+        description="Voice characteristics for TTS/audio (e.g., 'stern and commanding with sharp edge', 'soft and trembling, pleading tone')",
+    )
+
+
 
 
 # === PROMPT_TEMPLATE format for Veo (per scene) ===
-class SceneMetadata(BaseModel):
-    """Metadata for a scene prompt."""
-
-    prompt_name: str = Field(description="Short description of scene in Korean")
-    base_style: str = Field(description="Visual style (e.g., '영화적, 자연광, 4K')")
-    aspect_ratio: str = Field(default="9:16", description="Aspect ratio for YouTube Shorts")
-
-
 class SceneSetting(BaseModel):
     """Scene setting/location."""
 
-    location: str = Field(description="Location description in Korean")
-    lighting: str = Field(description="Lighting description in Korean")
+    location: str = Field(
+        description="""DETAILED location description in Korean. Must include:
+- Specific room/place type (e.g., '고급스러운 한옥 거실', '현대적인 펜트하우스 거실')
+- Wall/floor materials (e.g., '어두운 오크 나무 패널 벽', '대리석 바닥')
+- Key furniture and props (e.g., '전통 병풍이 배경에 펼쳐져 있음', '가죽 소파와 유리 테이블')
+- Atmosphere details (e.g., '창밖으로 비가 내리는 모습이 보임')"""
+    )
+    lighting: str = Field(
+        description="""DETAILED lighting description in Korean. Must include:
+- Light source and direction (e.g., '창문에서 들어오는 희미한 자연광')
+- Which parts are lit/shadowed (e.g., '순자의 얼굴 절반만 비춤', '지은의 뒤에서 역광')
+- Mood created by lighting (e.g., '차가운 푸른빛이 긴장감을 조성')
+- Any special lighting effects (e.g., '마지막에 제품에 스포트라이트처럼 조명 집중')"""
+    )
 
 
 class CameraSetup(BaseModel):
-    """Camera configuration."""
+    """Camera configuration for cinematic video generation - scene-level settings only."""
 
-    shot: str = Field(description="Shot type and framing")
-    movement: str = Field(description="Camera movement")
-    focus: str = Field(description="Focus and emphasis")
-    key_shots: str = Field(default="", description="Important cuts or focus changes")
+    lens: str = Field(
+        default="50mm",
+        description="Lens focal length: '35mm' (wider, more context), '50mm' (natural), '85mm' (portrait, compressed)"
+    )
+    depth_of_field: str = Field(
+        default="shallow, cinematic bokeh",
+        description="DoF style: 'shallow, cinematic bokeh' (dramatic), 'deep focus' (documentary), 'product sharp with soft background'"
+    )
+    texture: str = Field(
+        default="natural skin texture, realistic fabric folds",
+        description="Visual texture for photorealism: 'natural skin texture, realistic fabric folds, subtle facial details', 'product details crisp and clear'"
+    )
 
 
 class MoodStyle(BaseModel):
-    """Mood and style."""
+    """Mood and visual style."""
 
-    genre: str = Field(description="Genre/mood of the scene")
-    color_tone: str = Field(description="Color tone")
+    genre: str = Field(
+        description="""Genre/mood description in English. Be specific:
+- Scene 1: 'Intense Korean family drama confrontation', 'Tense chaebol inheritance dispute'
+- Scene 2: 'Heartwarming resolution with B급 comedic twist', 'Surprised reconciliation moment'"""
+    )
+    color_tone: str = Field(
+        description="""Color grading description. Include:
+- Overall tone (e.g., 'desaturated', 'warm golden tones')
+- Shadow color (e.g., 'teal shadows', 'cool blue shadows')
+- Highlight color (e.g., 'warm orange highlights')
+- Saturation level (e.g., 'increased saturation' for happy scenes)"""
+    )
 
 
 class AudioConfig(BaseModel):
-    """Audio configuration."""
+    """Audio configuration for video."""
 
-    background: str = Field(description="Background music/ambiance")
-    fx: str = Field(description="Sound effects")
+    background: str = Field(
+        description="""Background music description. Include:
+- Genre/style (e.g., 'Tense Korean drama OST', 'Gentle hopeful piano melody')
+- Tempo (e.g., 'slow building tension', 'upbeat')
+- Instruments if relevant (e.g., 'strings and piano', 'traditional Korean instruments')
+- Transitions (e.g., 'transitioning to playful upbeat tune at mood shift')"""
+    )
+    fx: str = Field(
+        description="""Sound effects with timing. Include:
+- Ambient sounds (e.g., 'rain pattering on window', 'clock ticking')
+- Action sounds (e.g., 'teacup placed on table', 'fabric rustling')
+- Dramatic effects (e.g., 'thunder rumble', 'dramatic whoosh at mood shift')
+- UI sounds if relevant (e.g., 'phone notification chime')"""
+    )
 
 
-class CharacterInScene(BaseModel):
-    """Character in a scene."""
+class CharacterMoment(BaseModel):
+    """Character's complete state at a specific moment in the timeline."""
 
-    name: str = Field(description="Character name")
-    appearance: str = Field(description="Appearance description")
-    emotion: str = Field(description="Emotional state")
-    position: str = Field(default="", description="Position in frame (e.g., left, center, standing)")
+    action: str = Field(
+        description="""Physical action in ENGLISH. What this character does during this sequence.
+Examples: 'places teacup firmly on table, lips curl into contemptuous sneer', 'wipes tears, lifts head to meet A\\'s gaze', 'stands motionless with arms crossed'
+If character is not acting, use: 'remains still' or 'watches silently'"""
+    )
+    dialogue: str = Field(
+        default="",
+        description="""Korean dialogue spoken by this character. Leave empty if no dialogue.
+Example: '우리 집안 며느리? 감히?'
+⚠️ Only this character's lines - do NOT include other character's dialogue here."""
+    )
+    emotion: str = Field(
+        description="""SINGLE emotional state. ONE emotion only, no transitions.
+- ❌ BAD: 'Longing shifting to cold anger'
+- ✅ GOOD: 'Cold contempt', 'Desperate heartbreak', 'Comical amazement', 'Relieved joy'"""
+    )
+    position: str = Field(
+        description="""Exact position and posture at this moment.
+- Frame position: 'left side of frame', 'center-right'
+- Body posture: 'standing tall', 'kneeling', 'leaning forward'
+- Relation to props/other: 'beside table', 'facing B', 'holding phone toward A'"""
+    )
 
 
 class TimelineEvent(BaseModel):
-    """Timeline event within a scene."""
+    """Timeline event within a scene - 2 seconds each, 4 events per scene."""
 
-    sequence: int = Field(description="Event sequence number")
-    timestamp: str = Field(description="Timestamp range (e.g., '00:00-00:04')")
-    action: str = Field(description="Action description with dialogue")
-    mood: str = Field(description="Mood of this moment")
-    audio: str = Field(description="Audio note (e.g., 'Dialogue must be in Korean')")
+    sequence: int = Field(description="Event sequence number: 1, 2, 3, or 4")
+    timestamp: str = Field(description="Timestamp range: '00:00-00:02', '00:02-00:04', '00:04-00:06', '00:06-00:08'")
+    camera: str = Field(
+        description="""Camera angle/shot type for this sequence.
+Examples: '[CU on A]', '[CU on B]', '[TWO-SHOT]', '[Medium]', '[MCU on phone]', '[Wide shot]'
+Scene 1 Seq 4 MUST be '[TWO-SHOT]'. Scene 2 Seq 4 should emphasize product."""
+    )
+    movement: str = Field(
+        default="static",
+        description="""Camera movement for this sequence.
+Examples: 'static', 'subtle handheld', 'slow dolly back', 'smooth dolly in', 'slight crane up', 'static hold'
+Be specific about the movement that happens during these 2 seconds."""
+    )
+    focus: str = Field(
+        default="",
+        description="""Focus description for this sequence.
+Examples: 'sharp on A's eyes, B soft blur', 'rack focus to phone screen', 'deep focus both characters', 'product tack-sharp, characters soft'
+Describe what should be sharp and what should be blurred."""
+    )
+    mood: str = Field(
+        description="Emotional atmosphere in English (e.g., 'Icy contempt', 'Desperate plea', 'B급 comedic climax')"
+    )
+    sfx: str = Field(
+        description="""Sound effects for this sequence (NOT dialogue). English description.
+Examples: 'teacup ceramic clink + distant thunder', 'rain intensifying', 'phone notification ding + upbeat music starts'"""
+    )
+    A: CharacterMoment = Field(description="Character A's action, dialogue, emotion, and position at this moment")
+    B: CharacterMoment = Field(description="Character B's action, dialogue, emotion, and position at this moment")
 
 
 class ScenePrompt(BaseModel):
     """A single scene in PROMPT_TEMPLATE format for Veo."""
 
-    metadata: SceneMetadata = Field(description="Scene metadata")
     scene_setting: SceneSetting = Field(description="Scene setting")
     camera_setup: CameraSetup = Field(description="Camera configuration")
     mood_style: MoodStyle = Field(description="Mood and style")
     audio: AudioConfig = Field(description="Audio configuration")
-    characters: list[CharacterInScene] = Field(description="Characters in this scene")
-    timeline: list[TimelineEvent] = Field(description="Timeline of events")
+    timeline: list[TimelineEvent] = Field(description="Timeline of events with per-sequence character states")
 
 
 class ScriptOutput(BaseModel):
     """Complete script output for dramatized ad."""
 
     product: Product = Field(description="Product information")
-    characters: Characters = Field(description="Character definitions for image generation")
+    characters: list[CharacterDefinition] = Field(description="Character definitions (list with id 'A', 'B', etc.)")
     scenes: list[ScenePrompt] = Field(description="Scene prompts in PROMPT_TEMPLATE format")
 
 _llm: ChatGoogleGenerativeAI | None = None
@@ -241,21 +335,45 @@ def plan_script_with_ai(
 
     log(f"AI decision - scenes: {len(scenes)}")
     log(f"Product: {product.get('name', 'N/A') if isinstance(product, dict) else product}")
-    log(f"Character A: {characters.get('character_a', {}).get('name', 'N/A')}")
-    log(f"Character B: {characters.get('character_b', {}).get('name', 'N/A')}")
+    for char in characters:
+        log(f"Character {char.get('id', '?')}: {char.get('name', 'N/A')}")
 
     return data
 
 
+def _build_character_description(char: dict[str, Any]) -> str:
+    """Build full character description from structured fields."""
+    parts = []
+    if char.get("gender"):
+        parts.append(f"Korean {char['gender']}")
+    if char.get("age"):
+        parts.append(char["age"])
+    if char.get("appearance"):
+        parts.append(char["appearance"])
+    if char.get("clothing"):
+        parts.append(char["clothing"])
+    return ", ".join(parts) if parts else "Korean person"
+
+
+def _get_character_by_id(characters: list[dict[str, Any]], char_id: str) -> dict[str, Any]:
+    """Find character by id from characters list."""
+    for char in characters:
+        if char.get("id") == char_id:
+            return char
+    return {}
+
+
 def generate_first_frame(
-    characters: dict[str, Any],
+    characters: list[dict[str, Any]],
     scene_setting: dict[str, Any],
+    first_sequence: dict[str, Any] | None = None,
 ) -> bytes:
     """Generate first frame with both characters together using fal.ai Nano Banana.
 
     Args:
-        characters: Character data from planning (character_a, character_b)
+        characters: Character list from planning (list with id 'A', 'B', etc.)
         scene_setting: Scene setting from first scene (location, lighting)
+        first_sequence: First timeline sequence with character states (emotion, position, action)
 
     Returns:
         Image bytes
@@ -264,14 +382,44 @@ def generate_first_frame(
 
     log(f"Model: {FAL_IMAGE_MODEL}")
 
-    # Build character descriptions
-    char_a = characters.get("character_a", {})
-    char_b = characters.get("character_b", {})
+    # Build character descriptions from list structure
+    char_a = _get_character_by_id(characters, "A")
+    char_b = _get_character_by_id(characters, "B")
 
     char_a_name = char_a.get("name", "Character A")
-    char_a_desc = char_a.get("description", "Korean woman in her 50s")
+    char_a_desc = _build_character_description(char_a)
     char_b_name = char_b.get("name", "Character B")
-    char_b_desc = char_b.get("description", "Korean woman in her 20s")
+    char_b_desc = _build_character_description(char_b)
+
+    # Add first sequence character states if available
+    if first_sequence:
+        seq_a = first_sequence.get("A", {})
+        seq_b = first_sequence.get("B", {})
+
+        # Enhance character descriptions with their first frame state
+        if seq_a:
+            emotion_a = seq_a.get("emotion", "")
+            position_a = seq_a.get("position", "")
+            action_a = seq_a.get("action", "")
+            if emotion_a:
+                char_a_desc += f". Expression: {emotion_a}"
+            if position_a:
+                char_a_desc += f". Position: {position_a}"
+            if action_a:
+                char_a_desc += f". Action: {action_a}"
+
+        if seq_b:
+            emotion_b = seq_b.get("emotion", "")
+            position_b = seq_b.get("position", "")
+            action_b = seq_b.get("action", "")
+            if emotion_b:
+                char_b_desc += f". Expression: {emotion_b}"
+            if position_b:
+                char_b_desc += f". Position: {position_b}"
+            if action_b:
+                char_b_desc += f". Action: {action_b}"
+
+        log(f"First sequence - A: {seq_a.get('emotion', 'N/A')}, B: {seq_b.get('emotion', 'N/A')}")
 
     location = scene_setting.get("location", "luxurious living room")
     lighting = scene_setting.get("lighting", "dramatic lighting")
@@ -321,7 +469,7 @@ def generate_cta_last_frame(
     scene1_last_frame_url: str,
     product_image_url: str,
     product_detail: dict[str, Any],
-    characters: dict[str, Any],
+    characters: list[dict[str, Any]],
     cta_action: str | None = None,
 ) -> bytes:
     """Generate CTA last frame by compositing scene1 last frame with product.
@@ -333,7 +481,7 @@ def generate_cta_last_frame(
         scene1_last_frame_url: URL of the last frame from Scene 1
         product_image_url: URL of the product image
         product_detail: Product information (name, description, key_benefit)
-        characters: Character data for context
+        characters: Character list for context (list with id 'A', 'B', etc.)
         cta_action: Action/dialogue description from Scene 2's last timeline sequence
 
     Returns:
@@ -349,8 +497,8 @@ def generate_cta_last_frame(
     product_name = product_detail.get("name", "product")
 
     # Get character info for context
-    char_a = characters.get("character_a", {})
-    char_b = characters.get("character_b", {})
+    char_a = _get_character_by_id(characters, "A")
+    char_b = _get_character_by_id(characters, "B")
     char_a_name = char_a.get("name", "Character A")
     char_b_name = char_b.get("name", "Character B")
 

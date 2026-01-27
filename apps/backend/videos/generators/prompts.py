@@ -24,6 +24,7 @@ class VideoStyle(str, Enum):
     """영상 스타일 템플릿"""
 
     MAKJANG_DRAMA = "makjang_drama"  # B급 막장 드라마 (기본)
+    LOTTERIA_STORY = "lotteria_story"  # 롯데리아형 스토리 콘텐츠
 
 
 DEFAULT_VIDEO_STYLE = VideoStyle.MAKJANG_DRAMA
@@ -59,8 +60,18 @@ COMMON_BASE_INSTRUCTIONS = """
 # OUTPUT FORMAT (STRICT JSON)
 You must output JSON with:
 1. `product`: Product info for reference
-2. `characters`: Character definitions for image generation
-3. `scenes`: Array of scene prompts in PROMPT_TEMPLATE format
+2. `characters`: Array of character definitions with id ("A", "B", etc.) - unchanging attributes (gender, age, appearance, clothing, voice)
+3. `scenes`: Array of scene prompts - each scene's characters reference root characters by character_id
+
+# CRITICAL: ONE EMOTION PER FRAME
+각 캐릭터의 emotion 필드는 **한 가지 감정만** 명시해야 합니다:
+- ❌ BAD: "Longing shifting to cold anger" (두 감정 혼합)
+- ❌ BAD: "Joy turning into shock" (감정 변화 표현)
+- ✅ GOOD: "Cold anger" (단일 감정)
+- ✅ GOOD: "Desperate heartbreak" (단일 감정)
+
+이유: AI 이미지/영상 생성 시 한 프레임에서 감정이 애매하게 섞이는 것을 방지합니다.
+감정 변화는 timeline의 sequence별로 다른 emotion을 지정하여 표현하세요.
 
 # CRITICAL: DETAILED ACTION DESCRIPTIONS
 Each timeline sequence의 "action" 필드는 Veo가 이해할 수 있도록 매우 상세하게 작성해야 합니다:
@@ -208,8 +219,93 @@ Scene 2 영상 생성 시 반드시 지켜야 할 규칙:
 3. **연속적 흐름**: Scene 1 마지막 프레임에서 자연스럽게 이어지는 동작
 """
 
+# -----------------------------------------------------------------------------
+# 1-2-2. 스타일별 규칙: 롯데리아형 스토리 콘텐츠
+# -----------------------------------------------------------------------------
+LOTTERIA_STORY_INSTRUCTIONS = """
+# FORMAT: 롯데리아형 스토리 콘텐츠 (CHALLENGE-PROOF AD - 2-SCENE STRUCTURE)
+외부 비난/편견에 대응하여 증명으로 반박하는 바이럴 구조
+
+## Scene 1: HOOK (외부 편견 + 긁힘) - 8 seconds
+- **Purpose**: 외부 비난/편견을 보여주고, 운영진이 "긁히는" 순간 포착
+- **Content**:
+  - 유저/일반인(B)이 브랜드/제품에 대한 편견을 말함
+  - 운영진/디렉터(A)가 이를 듣고 "긁히는" 반응
+- **Emotion**: 도전적, 약간의 분노, 자신감 넘치는 반박 의지
+- **IMPORTANT**: 제품을 직접 보여주지 않음. 편견과 반응에만 집중
+
+## Scene 2: PROOF + CTA (증명 및 판정 요청) - 8 seconds
+- **Purpose**: 편견을 반박하는 "증명"과 시청자 참여 유도
+- **Content**:
+  - 운영진(A)이 자신있게 "그래? 그럼 직접 보여줄게!" 태도
+  - 제품/서비스의 장점을 시각적으로 증명
+  - 마지막: 시청자에게 판정 요청 ("어때? 댓글로 알려줘!")
+- **Emotion**: 자신감, 유머, 시청자와의 유대감
+- **PRODUCT EMPHASIS**: 증명 과정에서 제품이 자연스럽게 등장
+
+### 캐릭터 설정
+- **A (운영진/디렉터)**: 브랜드를 대표하는 인물. 외부 비난에 "긁히면서도" 자신감 있게 반박
+- **B (유저/일반인)**: 외부 편견을 전달하는 역할. 후반부에서 증명에 놀라는 반응
+
+### 대사 예시
+**Scene 1 (긁힘):**
+- B: "솔직히 [제품명] 별로 아니야? 다들 그렇게 말하던데..."
+- A: "뭐? 직접 안 써보고 그런 소리 하는 거야?"
+- A: "좋아, 그럼 직접 보여줄게. 눈 크게 뜨고 봐!"
+
+**Scene 2 (증명):**
+- A: "자, 봐. 이게 [제품 장점]이야!"
+- B: "어... 진짜? 이건 몰랐네..."
+- A: "어때? 댓글로 알려줘! 진짜인지 아닌지!"
+
+### Camera rhythm (Scene 1)
+- Seq 1 (0-2초): B가 편견 발언
+- Seq 2 (2-4초): A의 "긁힘" 리액션 (살짝 화나는 표정)
+- Seq 3 (4-6초): A가 도전적으로 반박 선언
+- Seq 4 (6-8초): **[TWO-SHOT]** A가 자신감 있게 B를 향해
+
+### Camera rhythm (Scene 2)
+- Seq 1 (0-2초): Two-shot - A가 증명 시작
+- Seq 2 (2-4초): 제품/서비스 등장 (증명 과정)
+- Seq 3 (4-6초): B의 놀라는 리액션
+- Seq 4 (6-8초): **제품 강조 + CTA** - "댓글로 알려줘!"
+
+# HOOK SCENARIO IDEAS (편견 소재)
+- **품질 의심**: "그거 진짜 효과 있어? 광고 아니야?"
+- **가격 비판**: "그 가격에 그거밖에 안 돼?"
+- **경쟁사 비교**: "[경쟁사]가 더 낫지 않아?"
+- **과대광고 의심**: "다 뻥이지, 써본 사람은 다 실망했대"
+
+# CTA IDEAS (증명 + 참여 유도)
+- "직접 써보고 댓글로 알려줘!"
+- "진짜인지 아닌지, 너희가 판정해!"
+- "믿어? 안 믿어? 댓글 고고!"
+- "의심되면 직접 확인해봐!"
+
+# B급 반전 연출 (Scene 2 마지막 2초)
+**영상 연출:**
+- A가 자신감 넘치는 표정으로 카메라를 향해 시청자에게 말함
+- B는 제품에 놀라면서 "인정" 표정
+- **제품이 프레임 중앙에 크게 보이도록 배치**
+- 유머러스하지만 도전적인 분위기
+
+**제품 배치:**
+- ✅ 제품이 테이블 위, A의 손에 자연스럽게 있는 장면
+- ✅ 제품에 조명이 비춰 강조되는 장면
+- ❌ 로고를 정면으로 크게 들고 광고하는 포즈 → 콘텐츠 필터 트리거
+
+# SCENE 2 VIDEO GENERATION RULES (중요)
+Scene 2 영상 생성 시 반드시 지켜야 할 규칙:
+1. **제품 강조**: 마지막 프레임에 제품이 눈에 띄게 보이도록 프롬프트에 명시
+   - "no text, no subtitles, no captions, no signs, no banners, no written words"
+2. **글씨 없음**: 영상 내 어떤 텍스트도 포함되지 않도록 negative prompt에 추가
+3. **연속적 흐름**: Scene 1 마지막 프레임에서 자연스럽게 이어지는 동작
+4. **시청자 참여 유도**: A가 카메라를 향해 말하는 장면 포함 (CTA)
+"""
+
 STYLE_INSTRUCTIONS = {
     VideoStyle.MAKJANG_DRAMA: MAKJANG_DRAMA_INSTRUCTIONS,
+    VideoStyle.LOTTERIA_STORY: LOTTERIA_STORY_INSTRUCTIONS,
 }
 
 
@@ -220,20 +316,14 @@ PROMPT_TEMPLATE_GUIDE = """
 Each scene uses this PROMPT_TEMPLATE structure that Veo understands:
 ```
 {
-  "metadata": {
-    "prompt_name": "<Korean: 씬 설명>",
-    "base_style": "<Korean: 영상 스타일, e.g., '영화적, 자연광, 4K'>",
-    "aspect_ratio": "9:16"
-  },
   "scene_setting": {
     "location": "<Korean: 구체적인 장소 및 소품 배치까지 설명>",
     "lighting": "<Korean: 조명 방향, 강도, 분위기>"
   },
   "camera_setup": {
-    "shot": "<English: shot type and framing with specific angles>",
-    "movement": "<English: camera movement - dolly, pan, tilt, cuts as needed>",
-    "focus": "<English: focus pulling, depth of field, emphasis points>",
-    "key_shots": "<English: important shots and transitions>"
+    "lens": "<English: lens focal length, e.g., '50mm', '35mm'>",
+    "depth_of_field": "<English: DoF style, e.g., 'shallow, cinematic bokeh'>",
+    "texture": "<English: visual texture notes, e.g., 'natural skin texture, realistic fabric folds'>"
   },
   "mood_style": {
     "genre": "<English: genre/mood with specific emotional beats>",
@@ -243,42 +333,27 @@ Each scene uses this PROMPT_TEMPLATE structure that Veo understands:
     "background": "<English: specific music genre, tempo, instruments>",
     "fx": "<English: detailed sound effects with timing>"
   },
-  "characters": [
-    {
-      "name": "<Korean name>",
-      "appearance": "<English: VERY detailed - age, height, build, skin tone, hair style/color/length, facial features, clothing with colors and textures, accessories, distinguishing marks>",
-      "emotion": "<English: specific emotional state with physical manifestation>",
-      "position": "<English: exact position in frame with body posture>"
-    }
-  ],
   "timeline": [
     {
       "sequence": 1,
       "timestamp": "00:00-00:02",
-      "action": "<Korean: 매우 상세한 액션 - 카메라 앵글, 캐릭터 동작, 표정, 대사 포함>",
+      "camera": "<Shot type: '[CU on A]', '[TWO-SHOT]', '[Medium]', etc.>",
+      "movement": "<Camera movement: 'static', 'slow dolly back', 'subtle handheld', etc.>",
+      "focus": "<Focus: 'sharp on A, B soft blur', 'rack focus to phone', 'deep focus both'>",
       "mood": "<English: emotional atmosphere>",
-      "audio": "<Korean dialogue in quotes, sound effects>"
-    },
-    {
-      "sequence": 2,
-      "timestamp": "00:02-00:04",
-      "action": "<Korean: 상세한 액션 설명>",
-      "mood": "<English>",
-      "audio": "<Korean dialogue>"
-    },
-    {
-      "sequence": 3,
-      "timestamp": "00:04-00:06",
-      "action": "<Korean: 상세한 액션 설명>",
-      "mood": "<English>",
-      "audio": "<Korean dialogue>"
-    },
-    {
-      "sequence": 4,
-      "timestamp": "00:06-00:08",
-      "action": "<Korean: [TWO-SHOT] 필수 for Scene 1, 제품 강조 + B급 클라이맥스 for Scene 2>",
-      "mood": "<English>",
-      "audio": "<Korean dialogue>"
+      "sfx": "<English: sound effects only, no dialogue>",
+      "A": {
+        "action": "<English: physical action and expression>",
+        "dialogue": "<Korean dialogue or empty string>",
+        "emotion": "<single emotion>",
+        "position": "<position and posture>"
+      },
+      "B": {
+        "action": "<English: physical action or 'remains still'>",
+        "dialogue": "<Korean dialogue or empty string>",
+        "emotion": "<single emotion>",
+        "position": "<position and posture>"
+      }
     }
   ]
 }
@@ -294,155 +369,237 @@ EXAMPLE_OUTPUT_JSON = """
 {
   "product": {
     "name": "대모산 사주 강의",
-    "description": "Online fortune telling course",
-    "key_benefit": "Learn to read compatibility"
+    "description": "Online fortune telling course that teaches traditional Korean astrology and compatibility reading through video lessons",
+    "key_benefit": "Learn to read your own and your family's compatibility - perfect for resolving family conflicts about marriage"
   },
-  "characters": {
-    "character_a": {
+  "characters": [
+    {
+      "id": "A",
       "name": "김순자",
-      "description": "Korean woman, late 50s, 162cm, slim build, fair skin with visible age spots on hands. Dyed jet-black hair pulled into a tight bun secured with a jade hairpin. Sharp angular face with thin lips often pursed in disapproval, deep-set eyes with crow's feet. Wearing an expensive deep purple silk hanbok with intricate gold embroidery on the collar, jade bangle bracelet, small pearl earrings. Stands with impeccable posture, chin slightly raised."
+      "gender": "female",
+      "age": "late 50s",
+      "appearance": "162cm tall, slim and elegant build with the poise of old money. Fair skin with visible age spots on hands and subtle crow's feet around deep-set eyes. Dyed jet-black hair pulled into an immaculate tight bun, secured with an antique jade hairpin passed down through generations. Sharp angular face with high cheekbones, thin lips often pursed in disapproval, and a slightly hooked nose that gives her an aristocratic air.",
+      "clothing": "Wearing an expensive deep purple silk hanbok with intricate gold phoenix embroidery along the collar and sleeves. The jeogori (jacket) is perfectly pressed, the otgoreum (ribbon) tied in a precise bow. Jade bangle bracelet on left wrist, small pearl earrings, and a subtle hint of Chanel No. 5. Stands with impeccable posture, spine straight, chin slightly raised - the posture of someone who has never been told 'no'.",
+      "voice": "Stern and commanding with a sharp edge that cuts through any argument. Speaks in formal, clipped sentences. Each word is deliberate, measured, dripping with generations of authority."
     },
-    "character_b": {
+    {
+      "id": "B",
       "name": "박지은",
-      "description": "Korean woman, late 20s, 167cm, slender build, pale porcelain skin flushed from crying. Long straight black hair reaching mid-back, slightly disheveled with strands framing her tear-stained face. Soft oval face, large expressive eyes now red-rimmed, full lips trembling. Wearing a cream-colored cashmere cardigan over a white silk blouse, simple gold necklace with small pendant, minimal makeup now smudged."
+      "gender": "female",
+      "age": "late 20s",
+      "appearance": "167cm tall, slender build with delicate shoulders. Pale porcelain skin now flushed pink from crying, with tear tracks visible on her cheeks. Long straight black hair reaching mid-back, usually neat but now slightly disheveled with loose strands framing her tear-stained face. Soft oval face with a small chin, large expressive double-lidded eyes now red-rimmed and glistening, naturally full lips trembling slightly. Small mole near her left ear.",
+      "clothing": "Wearing a cream-colored cashmere cardigan (slightly wrinkled from nervous fidgeting) over a white silk blouse with mother-of-pearl buttons. Simple gold necklace with a small heart pendant - a gift from her boyfriend. Navy pleated skirt, nude stockings, modest 3cm beige heels. Minimal makeup now smudged from tears - mascara slightly running, lip tint faded from biting her lips.",
+      "voice": "Soft and trembling, voice cracking with emotion. Speaks in a pleading tone, each sentence ending with a slight upward inflection as if asking permission to exist. Occasionally stutters when overwhelmed."
     }
-  },
+  ],
   "scenes": [
     {
-      "metadata": {
-        "prompt_name": "시어머니의 결혼 반대",
-        "base_style": "영화적, 드라마틱 조명, 4K, 35mm film grain, 글씨 없음",
-        "aspect_ratio": "9:16"
-      },
       "scene_setting": {
-        "location": "고급스러운 한옥 거실. 어두운 오크 나무 패널 벽, 전통 병풍이 배경에 펼쳐져 있음.",
-        "lighting": "창문에서 들어오는 희미한 자연광이 순자의 얼굴 절반만 비춤."
+        "location": "고급스러운 전통 한옥 대청마루를 개조한 거실. 300년 된 느티나무 대들보가 천장을 가로지르고, 어두운 오크 나무 패널 벽에는 조선시대 산수화가 걸려있다. 바닥은 광이 나는 전통 마루로, 한쪽에는 붉은 비단으로 장식된 6폭 병풍이 펼쳐져 있다. 중앙에는 흑단 원목 테이블 위에 고급 백자 찻잔 세트가 놓여있고, 테이블 아래로 페르시안 러그가 깔려있다. 창밖으로는 빗줄기가 유리창을 타고 흘러내린다.",
+        "lighting": "창문에서 들어오는 희미한 자연광이 빗방울에 굴절되어 순자의 얼굴 왼쪽 절반만 차갑게 비춘다. 나머지 절반은 그림자에 잠겨 그녀의 표정을 더욱 위압적으로 만든다. 지은은 역광 상태로, 그녀의 실루엣이 연약하고 작아 보인다. 전체적으로 푸른 기운이 감도는 차가운 조명으로, 두 사람 사이의 긴장감을 극대화한다."
       },
       "camera_setup": {
-        "shot": "CU on A → CU on B → Medium → TWO-SHOT",
-        "movement": "Cut transitions between close-ups, pull back to reveal both characters in final sequence.",
-        "focus": "Shallow depth of field on speaker's face.",
-        "key_shots": "CRITICAL: Seq 4 establishes TWO-SHOT composition."
+        "lens": "50mm",
+        "depth_of_field": "shallow with cinematic bokeh, f/1.8 equivalent - background elements soft but recognizable",
+        "texture": "natural skin texture with visible pores on close-ups, realistic fabric folds on hanbok silk, subtle sheen on tear-wet cheeks, jade hairpin catching light"
       },
       "mood_style": {
-        "genre": "Intense Korean family drama confrontation",
-        "color_tone": "Desaturated with teal shadows and warm orange highlights."
+        "genre": "Intense Korean family drama confrontation - classic mother-in-law vs daughter-in-law 고부갈등 scene with generational and class tension",
+        "color_tone": "Desaturated overall (-20% saturation) with teal shadows (highlights the cold tension) and warm orange highlights only on skin tones. Slight crushed blacks for cinematic depth. Color contrast emphasizes the emotional divide between characters."
       },
       "audio": {
-        "background": "Tense Korean drama OST",
-        "fx": "Rain pattering, thunder, fabric rustling"
+        "background": "Tense Korean drama OST - sustained low cello drone with occasional dissonant string stabs. Tempo: 60 BPM, building tension. Traditional gayageum plucks punctuate key moments.",
+        "fx": "Continuous rain pattering against window glass. Distant thunder rumble at Seq 1. Teacup ceramic-on-wood sound at dialogue start."
       },
-      "characters": [
-        {
-          "name": "김순자",
-          "appearance": "Korean woman, late 50s, stern angular face, jet-black hair in tight bun",
-          "emotion": "Cold contempt masking underlying protective maternal fear.",
-          "position": "Left side of frame, standing tall beside the marble table"
-        },
-        {
-          "name": "박지은",
-          "appearance": "Korean woman, late 20s, tear-stained face, long disheveled black hair",
-          "emotion": "Desperate heartbreak mixed with determination.",
-          "position": "Center-right, having dropped to her knees"
-        }
-      ],
       "timeline": [
         {
           "sequence": 1,
           "timestamp": "00:00-00:02",
-          "action": "[CU on A] 순자가 찻잔을 테이블에 내려놓으며: '우리 집안 며느리? 감히?'",
-          "mood": "Icy contempt",
-          "audio": "'우리 집안 며느리? 감히?'"
+          "camera": "[CU on A]",
+          "movement": "static with subtle handheld micro-movements",
+          "focus": "sharp on Soonja's eyes and lips, background softly blurred",
+          "mood": "Icy contempt with aristocratic disdain",
+          "sfx": "teacup ceramic clink + distant thunder rumble",
+          "A": {
+            "action": "places the white porcelain teacup firmly on the black wooden table. Steam rises from the cup. Her lips curl into a contemptuous sneer as she looks down with cold eyes.",
+            "dialogue": "우리 집안 며느리? 감히?",
+            "emotion": "Cold contempt",
+            "position": "left side of frame, standing tall beside the table, chin raised"
+          },
+          "B": {
+            "action": "watches in stunned silence, eyes widening",
+            "dialogue": "",
+            "emotion": "Shocked fear",
+            "position": "center-right, kneeling on the Persian rug, hands clasped in lap"
+          }
         },
         {
           "sequence": 2,
           "timestamp": "00:02-00:04",
-          "action": "[CU on B] 지은의 눈에서 눈물이 흘러내리며: '어머니... 저는 정말...'",
-          "mood": "Desperate plea",
-          "audio": "'어머니... 저는 정말...'"
+          "camera": "[CU on B]",
+          "movement": "static with subtle handheld",
+          "focus": "rack focus to Jieun's tear-filled eyes",
+          "mood": "Desperate plea with fragile dignity",
+          "sfx": "shaky breathing + rain intensifying on window",
+          "A": {
+            "action": "remains standing, arms crossed, watching with cold disapproval",
+            "dialogue": "",
+            "emotion": "Impatient disdain",
+            "position": "left side, standing rigid with arms crossed"
+          },
+          "B": {
+            "action": "a single tear rolls down her cheek. She starts to wipe it with a trembling hand but stops, lifting her head to look up. Her lips quiver.",
+            "dialogue": "어머니... 저는 정말...",
+            "emotion": "Desperate heartbreak",
+            "position": "center-right, kneeling, head tilted up to meet A's gaze"
+          }
         },
         {
           "sequence": 3,
           "timestamp": "00:04-00:06",
-          "action": "[Medium] 순자가 손사래 치며: '사주가 안 맞아.' 지은: '준혁이를 사랑해요!'",
-          "mood": "Cold rejection meeting desperate love",
-          "audio": "'사주가 안 맞아.' + '준혁이를 사랑해요!'"
+          "camera": "[Medium shot, both visible]",
+          "movement": "slow dolly back to reveal spatial relationship",
+          "focus": "deep focus to show both characters' reactions",
+          "mood": "Cold rejection clashing with desperate love declaration",
+          "sfx": "jade bracelet jingle + heavy rain",
+          "A": {
+            "action": "raises one hand in a firm dismissive wave. Her jade bracelet jingles and catches the light.",
+            "dialogue": "사주가 안 맞아. 그게 다야.",
+            "emotion": "Cold finality",
+            "position": "left side, one hand raised dismissively"
+          },
+          "B": {
+            "action": "clenches her fists on her lap and lifts her chin defiantly. Their gazes meet.",
+            "dialogue": "준혁이를 사랑해요!",
+            "emotion": "Defiant determination",
+            "position": "center-right, still kneeling but chin raised in defiance"
+          }
         },
         {
           "sequence": 4,
           "timestamp": "00:06-00:08",
-          "action": "[TWO-SHOT] 두 사람 사이 팽팽한 긴장감. 지은: '그래도... 전 포기 안 해요!'",
-          "mood": "Climactic confrontation, both characters equally prominent",
-          "audio": "'그래도... 전 포기 안 해요!'"
+          "camera": "[TWO-SHOT] - CRITICAL: both characters must be fully visible",
+          "movement": "final pull-back to establish both characters equally in frame",
+          "focus": "deep focus, both characters sharp - this frame becomes Scene 2's starting point",
+          "mood": "Climactic confrontation - immovable force meets unstoppable will",
+          "sfx": "lightning crack + tension-building OST crescendo",
+          "A": {
+            "action": "stands motionless and rigid, glaring down",
+            "dialogue": "",
+            "emotion": "Immovable authority",
+            "position": "left side of frame, standing tall, arms at sides"
+          },
+          "B": {
+            "action": "remains kneeling, tears glistening in her eyes, pressing her clenched fist to her chest",
+            "dialogue": "그래도... 전 포기 안 해요!",
+            "emotion": "Trembling resolve",
+            "position": "center-right, kneeling with fist pressed to chest"
+          }
         }
       ]
     },
     {
-      "metadata": {
-        "prompt_name": "반전! 사주 강의로 해결",
-        "base_style": "따뜻한, 희망적, 4K, soft glow, 글씨 없음, 제품 강조",
-        "aspect_ratio": "9:16"
-      },
       "scene_setting": {
-        "location": "같은 한옥 거실이지만 분위기가 전환됨. 햇살이 비치기 시작.",
-        "lighting": "따스한 황금빛 햇살. 마지막에 제품에 스포트라이트처럼 조명이 집중됨."
+        "location": "같은 한옥 거실이지만 분위기가 180도 전환됨. 비가 그치고 구름 사이로 햇살이 비치기 시작한다. 창문으로 무지개 빛이 살짝 들어온다. 테이블 위의 찻잔은 그대로지만, 이제 따스한 빛을 받아 은은하게 빛난다. 병풍의 산수화가 이제는 평화로워 보인다.",
+        "lighting": "따스한 황금빛 햇살이 창문을 통해 쏟아져 들어온다. 이전 씬의 차가운 푸른빛은 완전히 사라지고, 전체적으로 따뜻한 오렌지-골드 톤. 마지막 시퀀스에서는 지은의 스마트폰 화면(제품)에 마치 스포트라이트처럼 햇살이 집중되어, 자연스럽게 시청자의 시선을 제품으로 유도한다."
       },
       "camera_setup": {
-        "shot": "TWO-SHOT → Medium on product → product emphasis",
-        "movement": "Maintain two-shot initially, transition to product focus.",
-        "focus": "Focus on product in final frame - must be sharp and prominent",
-        "key_shots": "FINAL FRAME: Product prominently displayed, well-lit, center of attention."
+        "lens": "50mm",
+        "depth_of_field": "shallow but product is tack-sharp, characters have pleasing soft quality, background completely diffused to golden bokeh",
+        "texture": "natural skin texture with warm healthy glow, product screen clearly legible, fabric appears softer and more luxurious in warm light"
       },
       "mood_style": {
-        "genre": "Heartwarming resolution with B급 comedic twist",
-        "color_tone": "Warm golden tones, increased saturation."
+        "genre": "Heartwarming K-drama resolution with B급 comedic twist - the classic 반전 moment where conflict unexpectedly resolves through product",
+        "color_tone": "Warm golden tones (+30% warmth), increased saturation (+15%), lifted shadows for airy feel. Skin tones glow healthily. Strong orange-gold color grade reminiscent of happy K-drama endings. Product should appear extra vibrant and appealing."
       },
       "audio": {
-        "background": "Gentle hopeful piano melody transitioning to playful upbeat tune",
-        "fx": "Phone notification chime, dramatic 'whoosh' at mood shift"
+        "background": "Music transitions: Gentle hopeful piano melody (Seq 1-2) → building anticipation (Seq 3) → playful upbeat tune with light percussion (Seq 4).",
+        "fx": "Birds chirping outside (rain stopped). Phone notification ding at product reveal. Sparkle SFX when product is highlighted."
       },
-      "characters": [
-        {
-          "name": "김순자",
-          "appearance": "Same woman, posture relaxing, expression shifting to genuinely surprised",
-          "emotion": "Skepticism melting into curiosity, then comical wide-eyed amazement",
-          "position": "Left side, arms uncrossing, leaning in with interest"
-        },
-        {
-          "name": "박지은",
-          "appearance": "Same woman, wiping tears, pulling out smartphone, hopeful smile emerging",
-          "emotion": "Determined hope transforming into relieved joy",
-          "position": "Center-right, rising from knees, extending phone toward mother-in-law"
-        }
-      ],
       "timeline": [
         {
           "sequence": 1,
           "timestamp": "00:00-00:02",
-          "action": "[TWO-SHOT] 지은이 스마트폰을 꺼낸다. 순자: '이게 뭔데?'",
-          "mood": "Transition moment",
-          "audio": "'이게 뭔데?'"
+          "camera": "[TWO-SHOT] - continuing naturally from Scene 1",
+          "movement": "minimal movement, continues from Scene 1's final composition",
+          "focus": "both characters in focus, phone starting to draw attention",
+          "mood": "Transition from tension to curiosity - the turning point",
+          "sfx": "smartphone screen activation + birds chirping",
+          "A": {
+            "action": "looks at the phone with guarded, suspicious eyes, arms still crossed",
+            "dialogue": "이게 뭔데?",
+            "emotion": "Guarded suspicion",
+            "position": "left side, standing with arms crossed, eyebrow raised"
+          },
+          "B": {
+            "action": "slowly pulls smartphone from pocket. Screen lights up, illuminating her face with soft glow. A hint of hope spreads across her expression.",
+            "dialogue": "",
+            "emotion": "Cautious hope",
+            "position": "center-right, rising from knees to standing, holding phone"
+          }
         },
         {
           "sequence": 2,
           "timestamp": "00:02-00:04",
-          "action": "[Medium on phone] 지은이 화면을 보여준다: '대모산 사주 강의요.'",
-          "mood": "Product reveal begins",
-          "audio": "'대모산 사주 강의요.'"
+          "camera": "[MCU on phone screen] - PRODUCT FIRST APPEARANCE",
+          "movement": "smooth dolly in toward phone screen",
+          "focus": "follow focus from characters to phone screen - product becoming sharp",
+          "mood": "Product reveal - hope begins to bloom",
+          "sfx": "phone notification ding + hopeful piano melody begins",
+          "A": {
+            "action": "leans slightly forward, eyes narrowing to read the screen",
+            "dialogue": "",
+            "emotion": "Reluctant curiosity",
+            "position": "left side, leaning in slightly toward the phone"
+          },
+          "B": {
+            "action": "turns smartphone screen toward A. Wipes remaining tears with one hand while managing a hopeful smile.",
+            "dialogue": "대모산 사주 강의요. 어머니도 직접 사주를 보실 수 있어요.",
+            "emotion": "Hopeful determination",
+            "position": "center-right, extending phone toward A"
+          }
         },
         {
           "sequence": 3,
           "timestamp": "00:04-00:06",
-          "action": "[제품 포커스] 지은: '어머니가 직접 저희 사주를 봐보시면...' 제품이 프레임 중앙에 크게 보임.",
-          "mood": "Curiosity building, product becoming center of attention",
-          "audio": "'어머니가 직접 저희 사주를 봐보시면...'"
+          "camera": "[Medium shot] - PRODUCT IN FOCUS center frame",
+          "movement": "slight crane up to show both characters' reactions to product",
+          "focus": "product sharp and clear, characters slightly soft but recognizable",
+          "mood": "Curiosity building - product becomes the solution",
+          "sfx": "anticipation-building music + sunlight sparkle SFX",
+          "A": {
+            "action": "eyes shift from suspicion to curiosity, staring intently at the smartphone screen. Uncrosses arms.",
+            "dialogue": "",
+            "emotion": "Growing curiosity",
+            "position": "left side, arms uncrossed, leaning forward with interest"
+          },
+          "B": {
+            "action": "takes one step closer, extending the phone. Sunlight catches the product on screen making it glow.",
+            "dialogue": "어머니가 직접 저희 사주를 봐보시면... 우리가 얼마나 잘 맞는지 아실 거예요.",
+            "emotion": "Confident hope",
+            "position": "center, holding phone up so product is prominently visible"
+          }
         },
         {
           "sequence": 4,
           "timestamp": "00:06-00:08",
-          "action": "[TWO-SHOT, 제품 강조] 순자가 눈이 휘둥그레: '어머! 대모산 사주? 이거 완전... 대박이네!' **제품이 프레임 중앙에 크게 보이며 조명을 받아 강조됨.**",
-          "mood": "B급 comic climax, PRODUCT PROMINENTLY DISPLAYED",
-          "audio": "'어머! 대모산 사주? 이거 완전... 대박이네!'"
+          "camera": "[TWO-SHOT] - PRODUCT HERO SHOT, smartphone center frame bathed in golden sunlight",
+          "movement": "static hold on final composition",
+          "focus": "product tack-sharp center frame, characters have pleasing soft quality - this is the money shot",
+          "mood": "B급 comedic climax - dramatic reversal complete, PRODUCT HERO SHOT",
+          "sfx": "comedic whoosh SFX + bright upbeat music + sparkle/twinkle SFX",
+          "A": {
+            "action": "eyes go comically wide, mouth drops open. Leans forward to peer at screen, expression suddenly brightening with genuine amazement.",
+            "dialogue": "어머! 대모산 사주? 이거 완전... 대박이네!",
+            "emotion": "Comical wide-eyed amazement",
+            "position": "left side, leaning forward, one hand reaching toward phone"
+          },
+          "B": {
+            "action": "beams with tears of joy glistening in her eyes. Holds phone steady in center frame.",
+            "dialogue": "",
+            "emotion": "Relieved joy",
+            "position": "center-right, phone extended center frame between both characters"
+          }
         }
       ]
     }
@@ -525,7 +682,9 @@ On the LEFT - {char_a_name}: {char_a_desc}. \
 On the RIGHT - {char_b_name}: {char_b_desc}. \
 Both characters MUST be ethnically Korean with East Asian features. \
 They are facing each other in a dramatic confrontation pose. \
-Korean drama style cinematography, high quality, photorealistic, 4K resolution. \
+Shot on 50mm lens, medium shot waist-up, shallow depth of field with cinematic bokeh. \
+Natural skin texture, realistic fabric folds, subtle facial details. \
+Korean drama style cinematography, high quality, photorealistic. \
 This is ONE single image with ONE continuous background, not divided into sections."""
 )
 

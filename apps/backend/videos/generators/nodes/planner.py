@@ -55,17 +55,30 @@ def plan_script(state: VideoGeneratorState) -> dict:
         }
 
         # Extract character details with full descriptions for consistency
-        characters_data = script_json.get("characters", {})
+        # characters is now a list: [{"id": "A", ...}, {"id": "B", ...}]
+        characters_list = script_json.get("characters", [])
         character_details: dict[str, CharacterDetail] = {}
 
-        for char_key in ["character_a", "character_b"]:
-            char_data = characters_data.get(char_key, {})
-            if char_data:
-                character_details[char_key] = {
-                    "name": char_data.get("name", char_key.upper()),
-                    "description": char_data.get("description", ""),
+        for char_data in characters_list:
+            char_id = char_data.get("id", "")
+            if char_id:
+                # Build full description from structured fields
+                description_parts = []
+                if char_data.get("gender"):
+                    description_parts.append(f"Korean {char_data['gender']}")
+                if char_data.get("age"):
+                    description_parts.append(char_data["age"])
+                if char_data.get("appearance"):
+                    description_parts.append(char_data["appearance"])
+                if char_data.get("clothing"):
+                    description_parts.append(char_data["clothing"])
+                full_description = ", ".join(description_parts) if description_parts else ""
+
+                character_details[f"character_{char_id.lower()}"] = {
+                    "name": char_data.get("name", f"Character {char_id}"),
+                    "description": full_description,
                 }
-                log(f"{char_key}: {character_details[char_key]['name']} - {character_details[char_key]['description'][:50]}...")
+                log(f"Character {char_id}: {char_data.get('name', 'N/A')} - {full_description[:50]}...")
 
         log(f"Product: {product_detail['name']}")
         log(f"Characters extracted: {len(character_details)}")
