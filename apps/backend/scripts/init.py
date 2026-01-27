@@ -21,12 +21,17 @@ def main():
     print("=== Django 초기화 ===")
 
     # 1. Migrate
-    print("\n[1/2] 마이그레이션 실행...")
+    print("\n[1/3] 마이그레이션 실행...")
     call_command("migrate", verbosity=1)
     print("✓ 마이그레이션 완료")
 
-    # 2. Superuser 생성
-    print("\n[2/2] 슈퍼유저 확인...")
+    # 2. Collectstatic
+    print("\n[2/3] 정적 파일 수집...")
+    call_command("collectstatic", "--noinput", verbosity=0)
+    print("✓ 정적 파일 수집 완료")
+
+    # 3. Superuser 생성
+    print("\n[3/3] 슈퍼유저 확인...")
     User = get_user_model()
 
     username = os.environ.get("DJANGO_SUPERUSER_USERNAME", "admin")

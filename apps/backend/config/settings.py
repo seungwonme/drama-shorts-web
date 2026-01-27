@@ -44,8 +44,10 @@ ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").sp
 # Application definition
 
 INSTALLED_APPS = [
-    # Third-party (jazzmin must be before admin)
-    "jazzmin",
+    # Third-party (unfold must be before admin)
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
     # Django
     "django.contrib.admin",
     "django.contrib.auth",
@@ -54,14 +56,14 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # Third-party
-    "import_export",
-    "debug_toolbar",
     "storages",
+    # Local apps
+    "videos",
 ]
 
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -147,11 +149,6 @@ CSRF_TRUSTED_ORIGINS = [origin for origin in CSRF_TRUSTED_ORIGINS if origin]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Debug Toolbar
-INTERNAL_IPS = [
-    "127.0.0.1",
-]
-
 # AWS S3 Storage
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
@@ -160,92 +157,98 @@ AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "ap-northeast-2")
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 
-# S3를 사용할 경우에만 설정
+# Storage 설정
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage"
+        if AWS_STORAGE_BUCKET_NAME
+        else "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
 if AWS_STORAGE_BUCKET_NAME:
-    STORAGES = {
-        "default": {
-            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-        },
-        "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-        },
-    }
     MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
+else:
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
 
-# Jazzmin Admin UI 설정
-JAZZMIN_SETTINGS = {
-    # 사이트 기본 설정
-    "site_title": "Drama Shorts Admin",
-    "site_header": "Drama Shorts",
-    "site_brand": "Drama Shorts",
-    "site_logo": None,
-    "login_logo": None,
-    "login_logo_dark": None,
-    "site_logo_classes": "img-circle",
-    "site_icon": None,
-    "welcome_sign": "Drama Shorts 관리자 페이지",
-    "copyright": "Drama Shorts",
-    # 검색 모델
-    "search_model": ["auth.User"],
-    # 상단 메뉴 링크
-    "topmenu_links": [
-        {"name": "홈", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "사이트 보기", "url": "/", "new_window": True},
-    ],
-    # 사이드바 설정
-    "show_sidebar": True,
-    "navigation_expanded": True,
-    "hide_apps": [],
-    "hide_models": [],
-    "order_with_respect_to": ["auth"],
-    # 아이콘 설정 (Font Awesome 5)
-    "icons": {
-        "auth": "fas fa-users-cog",
-        "auth.user": "fas fa-user",
-        "auth.Group": "fas fa-users",
+# Unfold Admin UI 설정
+from django.templatetags.static import static
+from django.urls import reverse_lazy
+
+UNFOLD = {
+    "SITE_TITLE": "Drama Shorts",
+    "SITE_HEADER": "Drama Shorts",
+    "SITE_SYMBOL": "movie",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": False,
+    "ENVIRONMENT": "config.settings.environment_callback",
+    "COLORS": {
+        "font": {
+            "subtle-light": "107 114 128",
+            "subtle-dark": "156 163 175",
+            "default-light": "75 85 99",
+            "default-dark": "209 213 219",
+            "important-light": "17 24 39",
+            "important-dark": "243 244 246",
+        },
+        "primary": {
+            "50": "250 245 255",
+            "100": "243 232 255",
+            "200": "233 213 255",
+            "300": "216 180 254",
+            "400": "192 132 252",
+            "500": "168 85 247",
+            "600": "147 51 234",
+            "700": "126 34 206",
+            "800": "107 33 168",
+            "900": "88 28 135",
+            "950": "59 7 100",
+        },
     },
-    "default_icon_parents": "fas fa-folder",
-    "default_icon_children": "fas fa-circle",
-    # UI 관련
-    "related_modal_active": True,
-    "custom_css": None,
-    "custom_js": None,
-    "use_google_fonts_cdn": True,
-    "show_ui_builder": False,
-    # 언어 및 기타
-    "changeform_format": "horizontal_tabs",
-    "changeform_format_overrides": {},
-    "language_chooser": False,
-}
-
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False,
-    "footer_small_text": False,
-    "body_small_text": False,
-    "brand_small_text": False,
-    "brand_colour": False,
-    "accent": "accent-primary",
-    "navbar": "navbar-white navbar-light",
-    "no_navbar_border": False,
-    "navbar_fixed": False,
-    "layout_boxed": False,
-    "footer_fixed": False,
-    "sidebar_fixed": True,
-    "sidebar": "sidebar-dark-primary",
-    "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "default",
-    "dark_mode_theme": None,
-    "button_classes": {
-        "primary": "btn-outline-primary",
-        "secondary": "btn-outline-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success",
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "영상 관리",
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "영상 생성 작업",
+                        "icon": "movie",
+                        "link": reverse_lazy("admin:videos_videogenerationjob_changelist"),
+                    },
+                    {
+                        "title": "제품",
+                        "icon": "inventory_2",
+                        "link": reverse_lazy("admin:videos_product_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "시스템",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "사용자",
+                        "icon": "person",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                ],
+            },
+        ],
     },
 }
+
+
+def environment_callback(request):
+    """Admin 환경 표시"""
+    if DEBUG:
+        return ["개발", "warning"]
+    return ["운영", "success"]

@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "prompt_name": "패스트 푸드 카운터에서 콤보 주문하기",
+    "base_style": "영화적, 자연광, 4K",
+    "aspect_ratio": "9:16"
+  },
+  "scene_setting": {
+    "location": "머리 위에 메뉴판이 있는 밝은 패스트 푸드 레스토랑 카운터",
+    "lighting": "따뜻한 실내 조명, 환영받는 분위기로 골고루 밝혀져"
+  },
+  "camera_setup": {
+    "shot": "Starts with a medium two-shot at the counter, then cuts to close-ups of each speaker's face",
+    "movement": "Gentle panning between characters",
+    "focus": "Emphasize expressions and the playful learning exchange",
+    "key_shots": "Close-up on grandmother's confused face, employee's friendly smile"
+  },
+  "mood_style": {
+    "genre": "Light comedy with warm human interaction",
+    "color_tone": "Bright and inviting"
+  },
+  "audio": {
+    "background": "Light fast-food restaurant ambiance",
+    "fx": "Soft background chatter, faint kitchen sounds"
+  },
+  "characters": [
+    {
+      "name": "Employee",
+      "appearance": "Young Black man, athletic build, wearing red polo shirt and red visor",
+      "emotion": "Friendly, smiling",
+      "position": "Behind counter, center of frame, leaning forward"
+    },
+    {
+      "name": "Grandmother",
+      "appearance": "Elderly Asian woman, short gray hair, floral blouse, green shopping bag",
+      "emotion": "Confused but cheerful",
+      "position": "In front of counter, slightly right of center"
+    }
+  ],
+  "timeline": [
+    {
+      "sequence": 1,
+      "timestamp": "00:00-00:04",
+      "action": "Employee leans forward slightly over the counter and asks politely: '단품 맞으시죠?'",
+      "mood": "Helpful",
+      "audio": "(Dialogue must be in Korean)"
+    },
+    {
+      "sequence": 2,
+      "timestamp": "00:04-00:08",
+      "action": "Grandmother gestures toward the menu boards and replies: '아니 나 저기 세트로 줘.'",
+      "mood": "Assertive but light-hearted",
+      "audio": "(Dialogue must be in Korean)"
+    }
+  ]
+}

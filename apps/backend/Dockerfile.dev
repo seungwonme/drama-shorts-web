@@ -2,6 +2,17 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+# 시스템 의존성 설치 (OpenCV, ffmpeg 등)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libxcb1 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # uv 설치
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
@@ -11,5 +22,5 @@ COPY pyproject.toml uv.lock ./
 # 의존성 설치
 RUN uv sync --frozen
 
-# 개발 서버 실행 (migration + superuser 생성 후 hot reload)
-CMD ["sh", "-c", "uv run python manage.py migrate && uv run python scripts/create_superuser.py && uv run python manage.py runserver 0.0.0.0:8000"]
+# 개발 서버 실행 (migration + collectstatic + superuser 생성 후 hot reload)
+CMD ["sh", "-c", "uv run python manage.py migrate && uv run python manage.py collectstatic --noinput && uv run python scripts/create_superuser.py && uv run python manage.py runserver 0.0.0.0:8000"]

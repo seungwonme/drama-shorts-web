@@ -3,13 +3,26 @@ name = "drama-shorts-web"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13.11"
+requires-python = ">=3.13"
 dependencies = [
+    # Django
     "boto3>=1.42.35",
     "django>=6.0.1",
-    "django-debug-toolbar>=6.2.0",
-    "django-import-export>=4.4.0",
-    "django-jazzmin>=3.0.1",
     "django-storages>=1.14.6",
     "gunicorn>=24.1.1",
+    "whitenoise>=6.8.2",
+    "django-unfold>=0.77.1",
+    # drama-shorts dependencies
+    "google-genai>=1.59.0",
+    "grandalf>=0.8",
+    "imageio-ffmpeg>=0.6.0",
+    "langchain-core>=1.2.7",
+    "langchain-google-genai>=4.2.0",
+    "langgraph>=1.0.6",
+    "moviepy>=2.2.1",
+    "opencv-python-headless>=4.13.0.90",
+    "pillow>=11.0.0",
+    "python-dotenv>=1.2.1",
+    "replicate>=1.0.7",
+    "requests>=2.32.5",
 ]
