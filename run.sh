@@ -13,7 +13,7 @@ else
     exit 1
 fi
 
-# Docker Compose 실행
-docker compose up -d
+# Docker Compose 실행 (--build로 항상 최신 코드 반영)
+docker compose up -d --build
 
 echo "✓ 실행 완료: http://localhost/admin/"

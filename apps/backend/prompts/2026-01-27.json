@@ -68,5 +68,10 @@
     "time": "16:36:15",
     "user": "seungwonan",
     "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/drama-shorts'\n\n이 폴더 Django에서 안쓰이는지 확인해줘 지우게 "
+  },
+  {
+    "time": "16:40:46",
+    "user": "seungwonan",
+    "prompt": "지금 배포 환경이 변경 사항들을 다 받을 수 있게끔 되어있니?\n\n./run.sh이야"
   }
 ]

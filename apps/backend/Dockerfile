@@ -2,8 +2,17 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# curl 설치 (healthcheck용)
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# 시스템 의존성 설치 (curl, ffmpeg, OpenCV 등)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libgl1 \
+    libglib2.0-0 \
+    libxcb1 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
 # uv 설치
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
