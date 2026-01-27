@@ -1,5 +1,7 @@
 from django.db import models
 
+from .generators.constants import DEFAULT_VIDEO_STYLE, VideoStyle
+
 
 # =============================================================================
 # Upload path helpers (job id별 폴더 구조)
@@ -161,14 +163,31 @@ class VideoGenerationJob(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "대기중"
         PLANNING = "planning", "기획중"
-        PREPARING = "preparing", "에셋 준비중"
-        GENERATING = "generating", "영상 생성중"
+        PREPARING = "preparing", "첫 프레임 생성중"
+        GENERATING_S1 = "generating_s1", "Scene 1 생성중"
+        PREPARING_CTA = "preparing_cta", "CTA 프레임 생성중"
+        GENERATING_S2 = "generating_s2", "Scene 2 생성중"
         CONCATENATING = "concatenating", "병합중"
         COMPLETED = "completed", "완료"
         FAILED = "failed", "실패"
 
+    class VideoStyleChoice(models.TextChoices):
+        """영상 스타일 선택"""
+
+        MAKJANG_DRAMA = VideoStyle.MAKJANG_DRAMA.value, "B급 막장 드라마"
+        # 추후 확장:
+        # ROMANTIC_COMEDY = VideoStyle.ROMANTIC_COMEDY.value, "로맨틱 코미디"
+        # EMOTIONAL = VideoStyle.EMOTIONAL.value, "감동/힐링"
+
     # 입력
     topic = models.CharField("주제", max_length=200, help_text="광고할 제품/서비스")
+    video_style = models.CharField(
+        "영상 스타일",
+        max_length=50,
+        choices=VideoStyleChoice.choices,
+        default=VideoStyleChoice.MAKJANG_DRAMA,
+        help_text="영상 스타일 템플릿",
+    )
     script = models.TextField(
         "스크립트", blank=True, help_text="선택적 줄거리/대본 (비어있으면 AI가 자동 생성)"
     )
@@ -212,6 +231,12 @@ class VideoGenerationJob(models.Model):
     # 상태
     status = models.CharField(
         "상태", max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    failed_at_status = models.CharField(
+        "실패 시점 상태",
+        max_length=20,
+        blank=True,
+        help_text="실패 시 어느 단계에서 실패했는지 기록 (재개 시 사용)",
     )
     current_step = models.CharField("현재 단계", max_length=100, blank=True)
     error_message = models.TextField("에러 메시지", blank=True)

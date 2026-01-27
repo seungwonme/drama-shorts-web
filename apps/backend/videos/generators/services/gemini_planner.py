@@ -11,7 +11,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from ..config import GEMINI_API_KEY, PLANNER_MODEL, REPLICATE_IMAGE_MODEL
-from ..constants import KOREAN_DRAMA_SYSTEM_PROMPT, SCRIPT_MODE_SYSTEM_PROMPT
+from ..constants import (
+    DEFAULT_VIDEO_STYLE,
+    KOREAN_DRAMA_SYSTEM_PROMPT,
+    SCRIPT_MODE_SYSTEM_PROMPT,
+    VideoStyle,
+    get_auto_system_prompt,
+    get_script_system_prompt,
+)
 from ..utils.logging import log, log_separator
 
 
@@ -192,6 +199,7 @@ def plan_script_with_ai(
     script: str | None = None,
     product_brand: str | None = None,
     product_description: str | None = None,
+    video_style: VideoStyle = DEFAULT_VIDEO_STYLE,
 ) -> dict[str, Any]:
     """Generate dramatized ad script JSON using Gemini with structured output.
 
@@ -203,11 +211,13 @@ def plan_script_with_ai(
         script: Optional user-provided storyline/script
         product_brand: Optional brand name
         product_description: Optional product description
+        video_style: Video style template (default: B급 막장 드라마)
 
     Returns:
         Raw script JSON containing product, characters, and segments data
     """
     log_separator("AI Script Generation Started")
+    log(f"Video Style: {video_style.value}")
 
     # Build product info section
     product_info_parts = [f"광고할 제품/서비스: {base_prompt}"]
@@ -217,9 +227,9 @@ def plan_script_with_ai(
         product_info_parts.append(f"제품 설명: {product_description}")
     product_info = "\n".join(product_info_parts)
 
-    # Choose system prompt based on whether script is provided
+    # Choose system prompt based on whether script is provided and video style
     if script:
-        system_prompt = SCRIPT_MODE_SYSTEM_PROMPT
+        system_prompt = get_script_system_prompt(video_style)
         user_input = f"""{product_info}
 
 사용자 제공 스크립트/줄거리:
@@ -231,7 +241,7 @@ def plan_script_with_ai(
 - 모든 묘사는 영어로, 대사만 한국어로 작성하세요.""".strip()
         log("Mode: Script-based generation")
     else:
-        system_prompt = KOREAN_DRAMA_SYSTEM_PROMPT
+        system_prompt = get_auto_system_prompt(video_style)
         user_input = f"""{product_info}
 
 위 제품/서비스를 홍보하는 드라마타이즈 광고 영상을 생성해주세요.

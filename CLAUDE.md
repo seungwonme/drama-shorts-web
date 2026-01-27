@@ -50,7 +50,7 @@ drama-shorts-web/
 │   │       ├── config.py         # API 키, 모델 설정
 │   │       ├── constants.py      # 시스템 프롬프트
 │   │       ├── exceptions.py     # ModerationError
-│   │       ├── nodes/            # plan_script, prepare_assets, generate_video_segment, concatenate_videos
+│   │       ├── nodes/            # plan_script, prepare_first_frame, prepare_cta_frame, generate_scene1, generate_scene2, concatenate_videos
 │   │       ├── services/         # gemini_planner.py, replicate_client.py
 │   │       ├── utils/            # logging.py, video.py
 │   │       └── assets/           # last-cta.png, sound-effect.wav
@@ -85,13 +85,16 @@ if final_state.get("final_video_bytes"):
     )
 ```
 
-### 영상 생성 워크플로우
+### 영상 생성 워크플로우 (7단계)
 
 ```
-plan_script (Gemini) → prepare_assets (Nano Banana 첫 프레임)
-    → generate_video_segment (Veo Scene 1) → generate_video_segment (Veo Scene 2 interpolation)
-    → concatenate_videos (병합 + 효과음) → final_video_bytes
+plan_script (Gemini) → prepare_first_frame (Nano Banana 첫 프레임)
+    → generate_scene1 (Veo Scene 1) → prepare_cta_frame (Nano Banana CTA 프레임)
+    → generate_scene2 (Veo Scene 2 interpolation) → concatenate_videos (병합 + 효과음)
+    → final_video_bytes
 ```
+
+각 단계 완료 시 즉시 DB/S3에 저장되어 중간 단계 오류 시에도 이전 결과물이 유지됩니다.
 
 - **Scene 1 (8초)**: 막장 드라마 상황 (image-to-video)
 - **Scene 2 (8초)**: 반전 + 제품 등장 (interpolation 모드)
@@ -113,6 +116,8 @@ class VideoGeneratorState(TypedDict):
 
     # 생성된 세그먼트 (bytes)
     segment_videos: list[SegmentVideo]  # [{video_bytes, index, title}]
+    scene1_video_bytes: bytes | None  # 즉시 저장용
+    scene2_video_bytes: bytes | None  # 즉시 저장용
 
     # 최종 출력 (bytes)
     final_video_bytes: bytes | None
@@ -124,7 +129,8 @@ class VideoGeneratorState(TypedDict):
 - **ProductImage**: S3 업로드 이미지 (`is_primary`로 대표 이미지 지정)
 - **VideoGenerationJob**: 영상 생성 작업
   - `product` FK 선택 → 대표 이미지 URL 자동 사용 (`effective_product_image_url`)
-  - `status`: pending → planning → preparing → generating → concatenating → completed
+  - `status`: pending → planning → preparing → generating_s1 → preparing_cta → generating_s2 → concatenating → completed
+  - `failed_at_status`: 실패 시점 상태 기록 (재개 시 사용)
 - **VideoSegment**: 생성된 세그먼트 영상
 
 ## 환경 변수
@@ -151,11 +157,18 @@ REPLICATE_API_TOKEN # Veo 영상 생성
 
 ### 진행도 확인
 
-- **목록 페이지**: 진행 바 컬럼에서 0~100% 진행률 표시
-- **상세 페이지**: "진행 상황" 섹션에서 6단계 체크리스트 확인
-  - 대기 → 기획 → 에셋 준비 → 영상 생성 → 병합 → 완료
+- **목록 페이지**: 진행 바 컬럼에서 0~100% 진행률 표시 (7단계)
+- **상세 페이지**: "진행 상황" 섹션에서 8단계 체크리스트 확인
+  - 대기 → 기획 → 첫 프레임 → Scene 1 → CTA 프레임 → Scene 2 → 병합 → 완료
   - 현재 단계는 파란색 강조, 완료된 단계는 녹색 체크
-  - 실패 시 에러 메시지 표시
+  - 실패 시 에러 메시지 및 실패 지점 표시
+
+### 실패 지점부터 재개 (FAILED 상태에서)
+
+중간 단계에서 실패한 경우, 이전 결과물을 재사용하여 실패 지점부터 재개할 수 있습니다:
+- Admin 상세 페이지에서 "실패 지점부터 재개" 버튼 클릭
+- `failed_at_status` 필드에 기록된 실패 지점부터 자동 재개
+- 이전 단계의 첫 프레임, Scene 1 영상 등이 재사용됨
 
 ### 단계별 재작업 (COMPLETED 상태에서)
 

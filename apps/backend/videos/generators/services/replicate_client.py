@@ -99,6 +99,15 @@ def create_and_download_video(
         error_msg = str(e).lower()
         log(f"API request failed: {e}", "ERROR")
 
-        if "moderation" in error_msg or "blocked" in error_msg or "safety" in error_msg:
+        # Detect content moderation errors
+        moderation_keywords = [
+            "moderation",
+            "blocked",
+            "safety",
+            "sensitive",  # "flagged as sensitive"
+            "content filter",
+            "e005",  # Replicate error code for moderation
+        ]
+        if any(keyword in error_msg for keyword in moderation_keywords):
             raise ModerationError(str(e))
         raise

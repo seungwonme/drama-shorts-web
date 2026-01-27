@@ -1,5 +1,6 @@
 """Planner node - generates scene script JSON using Gemini AI."""
 
+from ..constants import DEFAULT_VIDEO_STYLE
 from ..services.gemini_planner import plan_script_with_ai
 from ..state import CharacterDetail, ProductDetail, VideoGeneratorState
 from ..utils.logging import log, log_separator
@@ -22,8 +23,10 @@ def plan_script(state: VideoGeneratorState) -> dict:
     product_image_url = state.get("product_image_url")
     product_brand = state.get("product_brand")
     product_description = state.get("product_description")
+    video_style = state.get("video_style", DEFAULT_VIDEO_STYLE)
 
     log(f"Product/Service: {topic}")
+    log(f"Video Style: {video_style.value}")
     if product_brand:
         log(f"Brand: {product_brand}")
     if product_description:
@@ -40,6 +43,7 @@ def plan_script(state: VideoGeneratorState) -> dict:
             script=script,
             product_brand=product_brand,
             product_description=product_description,
+            video_style=video_style,
         )
 
         # Extract product detail

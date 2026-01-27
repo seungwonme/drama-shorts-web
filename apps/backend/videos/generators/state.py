@@ -3,6 +3,8 @@
 import operator
 from typing import Annotated, Any, TypedDict
 
+from .constants import DEFAULT_VIDEO_STYLE, VideoStyle
+
 
 class SegmentData(TypedDict):
     """Data for a single video segment."""
@@ -44,6 +46,9 @@ class VideoGeneratorState(TypedDict):
     script: str | None  # Optional: user-provided storyline/script
     product_image_url: str | None  # Optional: URL to product image for CTA frame
 
+    # Video style template
+    video_style: VideoStyle  # 영상 스타일 (기본: B급 막장 드라마)
+
     # Product info (from Django Product model)
     product_brand: str | None  # 제품 브랜드
     product_description: str | None  # 제품 설명
@@ -74,6 +79,10 @@ class VideoGeneratorState(TypedDict):
     # Generated video segments as bytes (uses reducer for accumulation)
     # Each tuple: (video_bytes, metadata_dict)
     segment_videos: Annotated[list[SegmentVideo], operator.add]
+
+    # Individual scene video bytes (for incremental saving)
+    scene1_video_bytes: bytes | None  # Scene 1 영상 (즉시 저장용)
+    scene2_video_bytes: bytes | None  # Scene 2 영상 (즉시 저장용)
 
     # Last frame image for scene continuity
     scene1_last_frame_image: bytes | None  # Last frame of Scene 1 for Scene 2 start

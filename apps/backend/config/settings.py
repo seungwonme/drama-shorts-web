@@ -211,10 +211,10 @@ UNFOLD = {
     },
     "SIDEBAR": {
         "show_search": True,
-        "show_all_applications": False,
+        "show_all_applications": False,  # 직접 정의한 navigation만 표시
         "navigation": [
             {
-                "title": "영상 관리",
+                "title": "영상 생성",
                 "separator": True,
                 "collapsible": False,
                 "items": [
@@ -224,9 +224,31 @@ UNFOLD = {
                         "link": reverse_lazy("admin:videos_videogenerationjob_changelist"),
                     },
                     {
+                        "title": "영상 세그먼트",
+                        "icon": "video_library",
+                        "link": reverse_lazy("admin:videos_videosegment_changelist"),
+                    },
+                    {
+                        "title": "영상 에셋",
+                        "icon": "perm_media",
+                        "link": reverse_lazy("admin:videos_videoasset_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "제품",
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
                         "title": "제품",
                         "icon": "inventory_2",
                         "link": reverse_lazy("admin:videos_product_changelist"),
+                    },
+                    {
+                        "title": "제품 이미지",
+                        "icon": "image",
+                        "link": reverse_lazy("admin:videos_productimage_changelist"),
                     },
                 ],
             },

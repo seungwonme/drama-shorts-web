@@ -15,7 +15,7 @@ REPLICATE_API_TOKEN = os.environ.get("REPLICATE_API_TOKEN", "")
 # Models
 PLANNER_MODEL = os.environ.get("GEMINI_AI_MODEL", "gemini-3-flash-preview")
 REPLICATE_VIDEO_MODEL = "google/veo-3.1-fast"
-REPLICATE_IMAGE_MODEL = "google/nano-banana"
+REPLICATE_IMAGE_MODEL = "google/nano-banana-pro"
 
 # Video settings
 RESOLUTION = "720p"

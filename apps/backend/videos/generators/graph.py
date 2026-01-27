@@ -4,88 +4,119 @@ from langgraph.graph import END, StateGraph
 
 from .nodes import (
     concatenate_videos,
-    generate_video_segment,
+    generate_scene1,
+    generate_scene2,
     handle_error,
     plan_script,
-    prepare_assets,
+    prepare_cta_frame,
+    prepare_first_frame,
 )
 from .state import VideoGeneratorState
-
-
-def should_continue_generation(state: VideoGeneratorState) -> str:
-    """Determine if we should continue generating segments or move to concatenation."""
-    if state.get("error"):
-        return "handle_error"
-
-    current_idx = state.get("current_segment_index", 0)
-    segments = state.get("segments", [])
-
-    if current_idx < len(segments):
-        return "generate_video_segment"
-    else:
-        return "concatenate_videos"
 
 
 def after_planning(state: VideoGeneratorState) -> str:
     """Determine next step after script planning."""
     if state.get("error"):
         return "handle_error"
-    return "prepare_assets"
+    return "prepare_first_frame"
 
 
-def after_assets(state: VideoGeneratorState) -> str:
-    """Determine next step after asset preparation."""
+def after_first_frame(state: VideoGeneratorState) -> str:
+    """Determine next step after first frame preparation."""
     if state.get("error"):
         return "handle_error"
-    return "generate_video_segment"
+    return "generate_scene1"
+
+
+def after_scene1(state: VideoGeneratorState) -> str:
+    """Determine next step after Scene 1 generation."""
+    if state.get("error"):
+        return "handle_error"
+    return "prepare_cta_frame"
+
+
+def after_cta_frame(state: VideoGeneratorState) -> str:
+    """Determine next step after CTA frame preparation."""
+    if state.get("error"):
+        return "handle_error"
+    return "generate_scene2"
+
+
+def after_scene2(state: VideoGeneratorState) -> str:
+    """Determine next step after Scene 2 generation."""
+    if state.get("error"):
+        return "handle_error"
+    return "concatenate_videos"
 
 
 def build_graph() -> StateGraph:
     """Build and return the video generation workflow graph.
 
-    Workflow:
-        plan_script → prepare_assets → generate_video_segment (loop) → concatenate_videos → END
-                 ↘                ↘                          ↘
-               handle_error    handle_error              handle_error → END
+    New granular workflow:
+        plan_script → prepare_first_frame → generate_scene1
+            → prepare_cta_frame → generate_scene2 → concatenate_videos → END
+                    ↘                     ↘                    ↘
+                 handle_error          handle_error        handle_error → END
     """
     workflow = StateGraph(VideoGeneratorState)
 
-    # Add nodes (split plan_scenes into plan_script + prepare_assets)
+    # Add nodes (split into granular steps)
     workflow.add_node("plan_script", plan_script)
-    workflow.add_node("prepare_assets", prepare_assets)
-    workflow.add_node("generate_video_segment", generate_video_segment)
+    workflow.add_node("prepare_first_frame", prepare_first_frame)
+    workflow.add_node("generate_scene1", generate_scene1)
+    workflow.add_node("prepare_cta_frame", prepare_cta_frame)
+    workflow.add_node("generate_scene2", generate_scene2)
     workflow.add_node("concatenate_videos", concatenate_videos)
     workflow.add_node("handle_error", handle_error)
 
     # Set entry point
     workflow.set_entry_point("plan_script")
 
-    # plan_script → prepare_assets or handle_error
+    # plan_script → prepare_first_frame or handle_error
     workflow.add_conditional_edges(
         "plan_script",
         after_planning,
         {
-            "prepare_assets": "prepare_assets",
+            "prepare_first_frame": "prepare_first_frame",
             "handle_error": "handle_error",
         },
     )
 
-    # prepare_assets → generate_video_segment or handle_error
+    # prepare_first_frame → generate_scene1 or handle_error
     workflow.add_conditional_edges(
-        "prepare_assets",
-        after_assets,
+        "prepare_first_frame",
+        after_first_frame,
         {
-            "generate_video_segment": "generate_video_segment",
+            "generate_scene1": "generate_scene1",
             "handle_error": "handle_error",
         },
     )
 
-    # generate_video_segment → loop or concatenate_videos or handle_error
+    # generate_scene1 → prepare_cta_frame or handle_error
     workflow.add_conditional_edges(
-        "generate_video_segment",
-        should_continue_generation,
+        "generate_scene1",
+        after_scene1,
         {
-            "generate_video_segment": "generate_video_segment",
+            "prepare_cta_frame": "prepare_cta_frame",
+            "handle_error": "handle_error",
+        },
+    )
+
+    # prepare_cta_frame → generate_scene2 or handle_error
+    workflow.add_conditional_edges(
+        "prepare_cta_frame",
+        after_cta_frame,
+        {
+            "generate_scene2": "generate_scene2",
+            "handle_error": "handle_error",
+        },
+    )
+
+    # generate_scene2 → concatenate_videos or handle_error
+    workflow.add_conditional_edges(
+        "generate_scene2",
+        after_scene2,
+        {
             "concatenate_videos": "concatenate_videos",
             "handle_error": "handle_error",
         },

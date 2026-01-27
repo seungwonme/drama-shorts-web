@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.utils.html import format_html
@@ -9,6 +10,62 @@ from .models import Product, ProductImage, VideoAsset, VideoGenerationJob, Video
 
 # Group 모델 숨기기 (사용하지 않음)
 admin.site.unregister(Group)
+
+
+# =============================================================================
+# 모든 Django 모델 자동 등록 (CRUD 가능)
+# =============================================================================
+
+
+class AutoModelAdmin(ModelAdmin):
+    """모든 필드를 자동으로 표시하는 ModelAdmin"""
+
+    def __init__(self, model, admin_site):
+        # list_display: 모든 필드 표시 (최대 10개)
+        fields = [f.name for f in model._meta.fields]
+        self.list_display = fields[:10]
+
+        # search_fields: CharField, TextField만
+        self.search_fields = [
+            f.name
+            for f in model._meta.fields
+            if f.__class__.__name__ in ("CharField", "TextField")
+        ][:3]
+
+        # list_filter: 선택 가능한 필드만
+        self.list_filter = [
+            f.name
+            for f in model._meta.fields
+            if f.__class__.__name__ in ("BooleanField", "DateTimeField", "DateField", "ForeignKey")
+        ][:3]
+
+        super().__init__(model, admin_site)
+
+
+def auto_register_models():
+    """등록되지 않은 모든 모델 자동 등록"""
+    # 제외할 앱 (Django 내부 앱 중 이미 등록된 것)
+    exclude_apps = {"admin", "contenttypes", "sessions"}
+
+    for model in apps.get_models():
+        app_label = model._meta.app_label
+
+        # 제외 앱 스킵
+        if app_label in exclude_apps:
+            continue
+
+        # 이미 등록된 모델 스킵
+        if model in admin.site._registry:
+            continue
+
+        try:
+            admin.site.register(model, AutoModelAdmin)
+        except admin.sites.AlreadyRegistered:
+            pass
+
+
+# 파일 끝에서 자동 등록 실행 (커스텀 ModelAdmin 등록 후)
+# _auto_register_models() 는 파일 맨 아래에서 호출
 
 
 # =============================================================================
@@ -112,6 +169,39 @@ class ProductAdmin(ModelAdmin):
     primary_image_preview.short_description = "대표 이미지"
 
 
+@admin.register(ProductImage)
+class ProductImageAdmin(ModelAdmin):
+    list_display = ["id", "product", "image_preview", "alt_text", "is_primary", "order", "created_at"]
+    list_filter = ["is_primary", "product", "created_at"]
+    search_fields = ["product__name", "alt_text"]
+    list_display_links = ["id"]
+    autocomplete_fields = ["product"]
+
+    fieldsets = (
+        (None, {"fields": ("product", "image", "image_preview_large", "alt_text", "is_primary", "order")}),
+        ("메타", {"fields": ("created_at",), "classes": ("collapse",)}),
+    )
+    readonly_fields = ["created_at", "image_preview_large"]
+
+    @admin.display(description="미리보기")
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="60" height="60" style="object-fit: cover; border-radius: 8px;" />',
+                obj.image.url,
+            )
+        return "-"
+
+    @admin.display(description="이미지 미리보기")
+    def image_preview_large(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="200" height="200" style="object-fit: cover; border-radius: 8px;" />',
+                obj.image.url,
+            )
+        return "-"
+
+
 # =============================================================================
 # Video Admin
 # =============================================================================
@@ -170,6 +260,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
     list_display = [
         "id",
         "topic",
+        "video_style_badge",
         "product",
         "status_badge",
         "progress_bar",
@@ -177,8 +268,9 @@ class VideoGenerationJobAdmin(ModelAdmin):
         "segment_count",
         "video_preview",
         "created_at",
+        "row_actions",  # 행별 액션 버튼
     ]
-    list_filter = ["status", "product", "created_at"]
+    list_filter = ["status", "video_style", "product", "created_at"]
     search_fields = ["topic", "script", "product__name"]
     list_display_links = ["id", "topic"]
     readonly_fields = [
@@ -199,8 +291,15 @@ class VideoGenerationJobAdmin(ModelAdmin):
     ]
     inlines = [VideoSegmentInline]
     autocomplete_fields = ["product"]
+
+    # 목록 페이지 상단 버튼 (선택된 항목들에 대해)
+    actions = ["bulk_generate_video_action", "bulk_delete_selected"]
+
+    # 상세 페이지 버튼
     actions_detail = [
         "generate_video_action",
+        "resume_video_action",
+        "cancel_video_action",
         "regenerate_first_frame_action",
         "regenerate_scene1_action",
         "regenerate_cta_last_frame_action",
@@ -235,11 +334,33 @@ class VideoGenerationJobAdmin(ModelAdmin):
         if job.status == VideoGenerationJob.Status.PENDING:
             return ["generate_video_action"]
 
+        # FAILED: 재시도 액션 + 재개 액션 (failed_at_status가 있는 경우)
+        if job.status == VideoGenerationJob.Status.FAILED:
+            actions = ["generate_video_action"]
+            # 중간 단계에서 실패한 경우 재개 액션 추가
+            if job.failed_at_status and job.failed_at_status not in [
+                VideoGenerationJob.Status.PENDING,
+                VideoGenerationJob.Status.PLANNING,
+            ]:
+                actions.append("resume_video_action")
+            return actions
+
         # COMPLETED: 재작업 액션들
         if job.status == VideoGenerationJob.Status.COMPLETED:
             return self._get_rework_action_names(job)
 
-        # 진행중/실패: 액션 없음
+        # 진행중 상태: 취소 액션
+        in_progress_statuses = [
+            VideoGenerationJob.Status.PLANNING,
+            VideoGenerationJob.Status.PREPARING,
+            VideoGenerationJob.Status.GENERATING_S1,
+            VideoGenerationJob.Status.PREPARING_CTA,
+            VideoGenerationJob.Status.GENERATING_S2,
+            VideoGenerationJob.Status.CONCATENATING,
+        ]
+        if job.status in in_progress_statuses:
+            return ["cancel_video_action"]
+
         return []
 
     def _get_rework_action_names(self, job):
@@ -270,7 +391,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
         return actions
 
     fieldsets = (
-        ("입력", {"fields": ("topic", "script", "product", "product_image_url")}),
+        ("입력", {"fields": ("topic", "video_style", "script", "product", "product_image_url")}),
         ("에셋", {"fields": ("last_cta_asset", "sound_effect_asset")}),
         (
             "진행 상황",
@@ -320,52 +441,122 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
     @action(description="영상 생성 실행", url_path="generate_video_action")
     def generate_video_action(self, request, object_id):
-        from django.db import DatabaseError, transaction
         from django.shortcuts import redirect
 
-        from .services import generate_video_sync_simple
+        from .services import generate_video_sync, generate_video_with_resume, get_resume_entry_point
 
         job = self.get_object(request, object_id)
 
-        # Row-level lock으로 중복 실행 방지
-        try:
-            with transaction.atomic():
-                locked_job = (
-                    VideoGenerationJob.objects.select_for_update(nowait=True)
-                    .filter(pk=job.pk, status=VideoGenerationJob.Status.PENDING)
-                    .first()
-                )
-                if not locked_job:
-                    self.message_user(
-                        request,
-                        f"Job #{job.id}은(는) 이미 처리 중이거나 대기 상태가 아닙니다.",
-                        level="warning",
-                    )
-                    return redirect(request.META.get("HTTP_REFERER", ".."))
+        # PENDING 또는 FAILED 상태에서만 실행 가능
+        allowed_statuses = [VideoGenerationJob.Status.PENDING, VideoGenerationJob.Status.FAILED]
 
-                # 즉시 상태 변경하여 다른 요청 차단
-                locked_job.status = VideoGenerationJob.Status.GENERATING
-                locked_job.current_step = "시작 중..."
-                locked_job.save(update_fields=["status", "current_step"])
-        except DatabaseError:
-            # 이미 다른 요청에서 처리 중 (lock 획득 실패)
+        if job.status not in allowed_statuses:
             self.message_user(
                 request,
-                f"Job #{job.id}은(는) 이미 다른 요청에서 처리 중입니다.",
+                f"Job #{job.id}은(는) 재시도 불가능한 상태입니다. (현재: {job.get_status_display()})",
                 level="warning",
             )
             return redirect(request.META.get("HTTP_REFERER", ".."))
 
-        # Lock 해제 후 실제 작업 수행
+        # 에러 메시지만 초기화 (failed_at_status는 유지하여 재개 지점 판단에 사용)
+        job.error_message = ""
+        job.current_step = "시작 중..."
+        job.save(update_fields=["current_step", "error_message"])
+
+        # 실패 지점이 있고 중간 단계라면 자동으로 재개
+        entry_point = get_resume_entry_point(job)
+        should_resume = (
+            job.status == VideoGenerationJob.Status.FAILED
+            and job.failed_at_status
+            and entry_point != "plan_script"
+        )
+
         try:
-            generate_video_sync_simple(locked_job)
-            self.message_user(request, f"Job #{job.id} 영상 생성 완료")
+            if should_resume:
+                generate_video_with_resume(job)
+                self.message_user(
+                    request,
+                    f"Job #{job.id} 영상 생성 완료 (재개 지점: {entry_point})",
+                )
+            else:
+                generate_video_sync(job)
+                self.message_user(request, f"Job #{job.id} 영상 생성 완료")
         except Exception as e:
-            locked_job.status = VideoGenerationJob.Status.FAILED
-            locked_job.error_message = str(e)
-            locked_job.save()
             self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
 
+        return redirect(request.META.get("HTTP_REFERER", ".."))
+
+    @action(description="실패 지점부터 재개", url_path="resume_video_action")
+    def resume_video_action(self, request, object_id):
+        from django.shortcuts import redirect
+
+        from .services import generate_video_with_resume, get_resume_entry_point
+
+        job = self.get_object(request, object_id)
+
+        # FAILED 상태에서만 재개 가능
+        if job.status != VideoGenerationJob.Status.FAILED:
+            self.message_user(
+                request,
+                f"Job #{job.id}은(는) 재개할 수 없는 상태입니다. (현재: {job.get_status_display()})",
+                level="warning",
+            )
+            return redirect(request.META.get("HTTP_REFERER", ".."))
+
+        # 재개 지점 확인
+        entry_point = get_resume_entry_point(job)
+        if entry_point == "plan_script":
+            self.message_user(
+                request,
+                f"Job #{job.id}은(는) 처음부터 재시도가 필요합니다. '영상 생성 실행' 버튼을 사용하세요.",
+                level="warning",
+            )
+            return redirect(request.META.get("HTTP_REFERER", ".."))
+
+        # 실제 작업 수행
+        try:
+            generate_video_with_resume(job)
+            self.message_user(
+                request,
+                f"Job #{job.id} 영상 생성 완료 (재개 지점: {entry_point})",
+            )
+        except Exception as e:
+            self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
+
+        return redirect(request.META.get("HTTP_REFERER", ".."))
+
+    @action(description="작업 취소", url_path="cancel_video_action")
+    def cancel_video_action(self, request, object_id):
+        from django.shortcuts import redirect
+
+        job = self.get_object(request, object_id)
+
+        # 진행중 상태에서만 취소 가능
+        in_progress_statuses = [
+            VideoGenerationJob.Status.PLANNING,
+            VideoGenerationJob.Status.PREPARING,
+            VideoGenerationJob.Status.GENERATING_S1,
+            VideoGenerationJob.Status.PREPARING_CTA,
+            VideoGenerationJob.Status.GENERATING_S2,
+            VideoGenerationJob.Status.CONCATENATING,
+        ]
+
+        if job.status not in in_progress_statuses:
+            self.message_user(
+                request,
+                f"Job #{job.id}은(는) 진행중 상태가 아닙니다. (현재: {job.get_status_display()})",
+                level="warning",
+            )
+            return redirect(request.META.get("HTTP_REFERER", ".."))
+
+        # 실패 시점 기록 후 상태를 FAILED로 변경
+        job.failed_at_status = job.status
+        job.status = VideoGenerationJob.Status.FAILED
+        job.error_message = "사용자에 의해 취소됨"
+        job.current_step = "취소됨"
+        job.save(update_fields=["status", "failed_at_status", "error_message", "current_step"])
+
+        self.message_user(request, f"Job #{job.id} 작업이 취소되었습니다.", level="success")
         return redirect(request.META.get("HTTP_REFERER", ".."))
 
     @action(description="첫 프레임 재생성 (Nano Banana)", url_path="regenerate_first_frame_action")
@@ -508,12 +699,123 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
         return redirect(request.META.get("HTTP_REFERER", ".."))
 
+    # =========================================================================
+    # 목록 페이지 액션 (버튼 형태)
+    # =========================================================================
+
+    @admin.action(description="선택된 작업 영상 생성/재시도")
+    def bulk_generate_video_action(self, request, queryset):
+        """선택된 PENDING 또는 FAILED 작업들의 영상 생성 (실패 시 자동 재개)"""
+        from .services import generate_video_sync, generate_video_with_resume, get_resume_entry_point
+
+        allowed_statuses = [VideoGenerationJob.Status.PENDING, VideoGenerationJob.Status.FAILED]
+        eligible_jobs = queryset.filter(status__in=allowed_statuses)
+        count = eligible_jobs.count()
+
+        if count == 0:
+            self.message_user(request, "대기중 또는 실패한 작업이 없습니다.", level="warning")
+            return
+
+        success = 0
+        for job in eligible_jobs:
+            try:
+                job.current_step = "시작 중..."
+                job.error_message = ""
+                job.save(update_fields=["current_step", "error_message"])
+
+                # 실패 지점이 있고 중간 단계라면 자동으로 재개
+                entry_point = get_resume_entry_point(job)
+                should_resume = (
+                    job.status == VideoGenerationJob.Status.FAILED
+                    and job.failed_at_status
+                    and entry_point != "plan_script"
+                )
+
+                if should_resume:
+                    generate_video_with_resume(job)
+                else:
+                    generate_video_sync(job)
+                success += 1
+            except Exception:
+                pass  # 에러는 서비스에서 저장됨
+
+        self.message_user(request, f"{success}/{count}개 영상 생성 완료")
+
+    @admin.action(description="선택된 작업 삭제")
+    def bulk_delete_selected(self, request, queryset):
+        """선택된 작업 삭제"""
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f"{count}개 작업 삭제됨")
+
+    # =========================================================================
+    # 행별 액션 버튼
+    # =========================================================================
+
+    @admin.display(description="액션")
+    def row_actions(self, obj):
+        """각 행에 액션 버튼 표시"""
+        from django.urls import reverse
+
+        buttons = []
+
+        if obj.status == VideoGenerationJob.Status.PENDING:
+            url = reverse("admin:videos_videogenerationjob_change", args=[obj.pk])
+            buttons.append(
+                f'<a href="{url}" class="px-3 py-1 bg-primary-600 text-white rounded-md text-xs font-medium hover:bg-primary-700">생성</a>'
+            )
+        elif obj.status == VideoGenerationJob.Status.COMPLETED:
+            if obj.final_video:
+                buttons.append(
+                    f'<a href="{obj.final_video.url}" target="_blank" class="px-3 py-1 bg-green-600 text-white rounded-md text-xs font-medium hover:bg-green-700">다운로드</a>'
+                )
+        elif obj.status == VideoGenerationJob.Status.FAILED:
+            url = reverse("admin:videos_videogenerationjob_change", args=[obj.pk])
+            buttons.append(
+                f'<a href="{url}" class="px-3 py-1 bg-orange-600 text-white rounded-md text-xs font-medium hover:bg-orange-700">재시도</a>'
+            )
+        elif obj.status in [
+            VideoGenerationJob.Status.PLANNING,
+            VideoGenerationJob.Status.PREPARING,
+            VideoGenerationJob.Status.GENERATING_S1,
+            VideoGenerationJob.Status.PREPARING_CTA,
+            VideoGenerationJob.Status.GENERATING_S2,
+            VideoGenerationJob.Status.CONCATENATING,
+        ]:
+            # 진행중 상태: 취소 버튼
+            url = reverse("admin:videos_videogenerationjob_cancel_video_action", args=[obj.pk])
+            buttons.append(
+                f'<a href="{url}" class="px-3 py-1 bg-gray-600 text-white rounded-md text-xs font-medium hover:bg-gray-700">취소</a>'
+            )
+
+        if not buttons:
+            return "-"
+
+        return mark_safe(" ".join(buttons))
+
+    def video_style_badge(self, obj):
+        """영상 스타일 배지"""
+        style_colors = {
+            "makjang_drama": "bg-purple-100 text-purple-700",
+        }
+        css_class = style_colors.get(obj.video_style, "bg-gray-100 text-gray-700")
+        return format_html(
+            '<span class="{} px-2 py-1 rounded-md text-xs font-medium">{}</span>',
+            css_class,
+            obj.get_video_style_display(),
+        )
+
+    video_style_badge.short_description = "스타일"
+    video_style_badge.admin_order_field = "video_style"
+
     def status_badge(self, obj):
         colors = {
             VideoGenerationJob.Status.PENDING: "bg-gray-100 text-gray-700",
             VideoGenerationJob.Status.PLANNING: "bg-blue-100 text-blue-700",
             VideoGenerationJob.Status.PREPARING: "bg-blue-100 text-blue-700",
-            VideoGenerationJob.Status.GENERATING: "bg-yellow-100 text-yellow-700",
+            VideoGenerationJob.Status.GENERATING_S1: "bg-yellow-100 text-yellow-700",
+            VideoGenerationJob.Status.PREPARING_CTA: "bg-blue-100 text-blue-700",
+            VideoGenerationJob.Status.GENERATING_S2: "bg-yellow-100 text-yellow-700",
             VideoGenerationJob.Status.CONCATENATING: "bg-yellow-100 text-yellow-700",
             VideoGenerationJob.Status.COMPLETED: "bg-green-100 text-green-700",
             VideoGenerationJob.Status.FAILED: "bg-red-100 text-red-700",
@@ -529,24 +831,36 @@ class VideoGenerationJobAdmin(ModelAdmin):
     status_badge.admin_order_field = "status"
 
     def progress_bar(self, obj):
-        """진행 바 표시"""
-        # 상태별 진행률
+        """진행 바 표시 (7단계)"""
+        # 상태별 진행률 (7단계: 0%, 14%, 28%, 42%, 57%, 71%, 86%, 100%)
         progress_map = {
             VideoGenerationJob.Status.PENDING: 0,
-            VideoGenerationJob.Status.PLANNING: 20,
-            VideoGenerationJob.Status.PREPARING: 40,
-            VideoGenerationJob.Status.GENERATING: 60,
-            VideoGenerationJob.Status.CONCATENATING: 80,
+            VideoGenerationJob.Status.PLANNING: 14,
+            VideoGenerationJob.Status.PREPARING: 28,
+            VideoGenerationJob.Status.GENERATING_S1: 42,
+            VideoGenerationJob.Status.PREPARING_CTA: 57,
+            VideoGenerationJob.Status.GENERATING_S2: 71,
+            VideoGenerationJob.Status.CONCATENATING: 86,
             VideoGenerationJob.Status.COMPLETED: 100,
             VideoGenerationJob.Status.FAILED: 0,
         }
         progress = progress_map.get(obj.status, 0)
 
-        # 실패 상태는 별도 표시
+        # 실패 상태: failed_at_status 기준으로 진행도 표시
         if obj.status == VideoGenerationJob.Status.FAILED:
+            # 실패 지점까지의 진행률 계산
+            failed_progress = progress_map.get(obj.failed_at_status, 0)
+            if failed_progress > 0:
+                return format_html(
+                    '<div style="width: 100px; height: 8px; background: #fee2e2; border-radius: 4px; overflow: hidden;">'
+                    '<div style="width: {}%; height: 100%; background: #ef4444; border-radius: 4px;"></div>'
+                    '</div>'
+                    '<span style="font-size: 10px; color: #ef4444;">실패 ({}%)</span>',
+                    failed_progress,
+                    failed_progress,
+                )
             return mark_safe(
                 '<div style="width: 100px; height: 8px; background: #fee2e2; border-radius: 4px;">'
-                '<div style="width: 100%; height: 100%; background: #ef4444; border-radius: 4px;"></div>'
                 '</div>'
                 '<span style="font-size: 10px; color: #ef4444;">실패</span>'
             )
@@ -634,13 +948,15 @@ class VideoGenerationJobAdmin(ModelAdmin):
     cta_last_frame_preview.short_description = "CTA 마지막 프레임"
 
     def progress_steps_display(self, obj):
-        """단계별 진행 상황 표시"""
-        # 단계 정의
+        """단계별 진행 상황 표시 (7단계)"""
+        # 단계 정의 (7단계)
         steps = [
             ("pending", "대기", "작업이 대기열에 있습니다"),
             ("planning", "기획", "Gemini AI가 스크립트를 기획합니다"),
-            ("preparing", "에셋 준비", "첫 프레임 이미지를 생성합니다"),
-            ("generating", "영상 생성", "Veo로 Scene 1, 2 영상을 생성합니다"),
+            ("preparing", "첫 프레임", "첫 프레임 이미지를 생성합니다"),
+            ("generating_s1", "Scene 1", "Veo로 Scene 1 영상을 생성합니다"),
+            ("preparing_cta", "CTA 프레임", "제품 CTA 프레임을 생성합니다"),
+            ("generating_s2", "Scene 2", "Veo로 Scene 2 영상을 생성합니다"),
             ("concatenating", "병합", "영상을 병합하고 효과음을 추가합니다"),
             ("completed", "완료", "영상 생성이 완료되었습니다"),
         ]
@@ -650,16 +966,23 @@ class VideoGenerationJobAdmin(ModelAdmin):
             VideoGenerationJob.Status.PENDING: 0,
             VideoGenerationJob.Status.PLANNING: 1,
             VideoGenerationJob.Status.PREPARING: 2,
-            VideoGenerationJob.Status.GENERATING: 3,
-            VideoGenerationJob.Status.CONCATENATING: 4,
-            VideoGenerationJob.Status.COMPLETED: 5,
+            VideoGenerationJob.Status.GENERATING_S1: 3,
+            VideoGenerationJob.Status.PREPARING_CTA: 4,
+            VideoGenerationJob.Status.GENERATING_S2: 5,
+            VideoGenerationJob.Status.CONCATENATING: 6,
+            VideoGenerationJob.Status.COMPLETED: 7,
             VideoGenerationJob.Status.FAILED: -1,
         }
 
         current_order = status_order.get(obj.status, 0)
 
-        # 실패 상태 특별 처리
+        # 실패 상태: 실패 지점까지 진행 상황 표시
         if obj.status == VideoGenerationJob.Status.FAILED:
+            failed_order = status_order.get(obj.failed_at_status, 0)
+            # 실패 지점까지의 진행률
+            progress_percent = min(100, (failed_order / 7) * 100) if failed_order > 0 else 0
+
+            # 에러 메시지 박스
             error_html = f"""
             <div style="padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 16px;">
                 <div style="display: flex; align-items: center; gap: 8px; color: #dc2626; font-weight: 600;">
@@ -671,10 +994,60 @@ class VideoGenerationJobAdmin(ModelAdmin):
                 </div>
             </div>
             """
-            return mark_safe(error_html)
 
-        # 진행 바
-        progress_percent = min(100, (current_order / 5) * 100)
+            # 진행 바
+            html = error_html + f"""
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-size: 14px; font-weight: 600; color: #374151;">진행률 (실패 시점)</span>
+                    <span style="font-size: 14px; font-weight: 600; color: #ef4444;">{int(progress_percent)}%</span>
+                </div>
+                <div style="width: 100%; height: 12px; background: #fee2e2; border-radius: 6px; overflow: hidden;">
+                    <div style="width: {progress_percent}%; height: 100%; background: #ef4444; border-radius: 6px;"></div>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+            """
+
+            # 단계별 표시 (실패 지점까지)
+            for i, (status_key, label, description) in enumerate(steps):
+                if i < failed_order:
+                    # 완료된 단계
+                    icon = "&#10004;"
+                    bg_color = "#dcfce7"
+                    border_color = "#22c55e"
+                    icon_color = "#22c55e"
+                    text_color = "#166534"
+                elif i == failed_order:
+                    # 실패한 단계
+                    icon = "&#10060;"
+                    bg_color = "#fef2f2"
+                    border_color = "#ef4444"
+                    icon_color = "#ef4444"
+                    text_color = "#991b1b"
+                else:
+                    # 대기 단계
+                    icon = "&#9675;"
+                    bg_color = "#f9fafb"
+                    border_color = "#e5e7eb"
+                    icon_color = "#9ca3af"
+                    text_color = "#6b7280"
+
+                html += f"""
+                <div style="padding: 12px; background: {bg_color}; border: 2px solid {border_color}; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px; color: {icon_color};">{icon}</span>
+                        <span style="font-weight: 600; color: {text_color};">{label}</span>
+                    </div>
+                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{description}</div>
+                </div>
+                """
+
+            html += "</div>"
+            return mark_safe(html)
+
+        # 진행 바 (7단계)
+        progress_percent = min(100, (current_order / 7) * 100)
 
         html = f"""
         <div style="margin-bottom: 20px;">
@@ -686,7 +1059,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
                 <div style="width: {progress_percent}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 6px; transition: width 0.5s ease;"></div>
             </div>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
         """
 
         for i, (status_key, label, description) in enumerate(steps):
@@ -732,3 +1105,99 @@ class VideoGenerationJobAdmin(ModelAdmin):
         return mark_safe(html)
 
     progress_steps_display.short_description = "진행 상황"
+
+
+# =============================================================================
+# VideoSegment Admin (독립 CRUD)
+# =============================================================================
+
+
+@admin.register(VideoSegment)
+class VideoSegmentAdmin(ModelAdmin):
+    list_display = [
+        "id",
+        "job_link",
+        "segment_index",
+        "title",
+        "seconds",
+        "status_badge",
+        "video_preview",
+        "last_frame_preview",
+    ]
+    list_filter = ["status", "job__status", "segment_index"]
+    search_fields = ["job__topic", "title", "prompt"]
+    list_display_links = ["id"]
+    autocomplete_fields = ["job"]
+
+    fieldsets = (
+        (None, {"fields": ("job", "segment_index", "title", "seconds")}),
+        ("프롬프트", {"fields": ("prompt",)}),
+        ("결과", {"fields": ("status", "video_file", "video_preview_large", "last_frame", "last_frame_preview_large")}),
+        ("에러", {"fields": ("error_message",), "classes": ("collapse",)}),
+    )
+    readonly_fields = ["video_preview_large", "last_frame_preview_large"]
+
+    @admin.display(description="작업")
+    def job_link(self, obj):
+        from django.urls import reverse
+        url = reverse("admin:videos_videogenerationjob_change", args=[obj.job_id])
+        return format_html('<a href="{}">{}</a>', url, obj.job.topic[:30])
+
+    @admin.display(description="상태")
+    def status_badge(self, obj):
+        colors = {
+            VideoSegment.Status.PENDING: "bg-gray-100 text-gray-700",
+            VideoSegment.Status.GENERATING: "bg-yellow-100 text-yellow-700",
+            VideoSegment.Status.COMPLETED: "bg-green-100 text-green-700",
+            VideoSegment.Status.SKIPPED: "bg-red-100 text-red-700",
+        }
+        css_class = colors.get(obj.status, "bg-gray-100 text-gray-700")
+        return format_html(
+            '<span class="{} px-2 py-1 rounded-md text-xs font-medium">{}</span>',
+            css_class,
+            obj.get_status_display(),
+        )
+
+    @admin.display(description="영상")
+    def video_preview(self, obj):
+        if obj.video_file:
+            return format_html(
+                '<a href="{}" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium">다운로드</a>',
+                obj.video_file.url,
+            )
+        return "-"
+
+    @admin.display(description="영상 미리보기")
+    def video_preview_large(self, obj):
+        if obj.video_file:
+            return format_html(
+                '<video width="480" height="270" controls style="border-radius: 8px;">'
+                '<source src="{}" type="video/mp4">'
+                '</video>',
+                obj.video_file.url,
+            )
+        return "-"
+
+    @admin.display(description="마지막 프레임")
+    def last_frame_preview(self, obj):
+        if obj.last_frame:
+            return format_html(
+                '<img src="{}" width="80" height="45" style="object-fit: cover; border-radius: 4px;" />',
+                obj.last_frame.url,
+            )
+        return "-"
+
+    @admin.display(description="마지막 프레임 미리보기")
+    def last_frame_preview_large(self, obj):
+        if obj.last_frame:
+            return format_html(
+                '<img src="{}" width="320" height="180" style="object-fit: cover; border-radius: 8px;" />',
+                obj.last_frame.url,
+            )
+        return "-"
+
+
+# =============================================================================
+# 자동 등록 실행 (파일 맨 끝에서 실행해야 커스텀 ModelAdmin이 우선 적용됨)
+# =============================================================================
+auto_register_models()

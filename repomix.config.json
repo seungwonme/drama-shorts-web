@@ -1,0 +1,50 @@
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "headerText": "Drama Shorts Web - Django Admin 기반 YouTube Shorts 드라마타이즈 광고 영상 자동 생성 시스템",
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "topFilesLength": 10,
+    "showLineNumbers": true,
+    "copyToClipboard": false
+  },
+  "include": [
+    "CLAUDE.md",
+    "README.md",
+    "docs/**/*.md",
+    "apps/backend/config/settings.py",
+    "apps/backend/config/urls.py",
+    "apps/backend/videos/models.py",
+    "apps/backend/videos/admin.py",
+    "apps/backend/videos/services.py",
+    "apps/backend/videos/rework_services.py",
+    "apps/backend/videos/generators/graph.py",
+    "apps/backend/videos/generators/state.py",
+    "apps/backend/videos/generators/config.py",
+    "apps/backend/videos/generators/constants.py",
+    "apps/backend/videos/generators/exceptions.py",
+    "apps/backend/videos/generators/nodes/*.py",
+    "apps/backend/videos/generators/services/*.py",
+    "apps/backend/videos/generators/utils/*.py",
+    "docker-compose.yml",
+    "docker-compose.dev.yml",
+    ".env.example"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/.venv/**",
+      "**/staticfiles/**",
+      "**/migrations/**",
+      "**/__pycache__/**",
+      "*.pyc",
+      ".git/**",
+      "repomix-output.*"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}
