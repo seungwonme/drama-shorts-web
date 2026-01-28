@@ -26,7 +26,7 @@ from .models import VideoGenerationJob, VideoSegment
 def regenerate_first_frame(job: VideoGenerationJob) -> bytes:
     """Regenerate the first frame image using Nano Banana.
 
-    Requires: job.script_json (characters, scene_setting)
+    Requires: job.script_json (characters, scene_setting, first timeline sequence)
     Updates: job.first_frame
 
     Args:
@@ -38,16 +38,19 @@ def regenerate_first_frame(job: VideoGenerationJob) -> bytes:
     if not job.script_json:
         raise ValueError("script_json is required to regenerate first frame")
 
-    characters = job.script_json.get("characters", {})
+    characters = job.script_json.get("characters", [])
     scenes = job.script_json.get("scenes", [])
 
     if not scenes:
         raise ValueError("No scenes found in script_json")
 
-    scene_setting = scenes[0].get("scene_setting", {})
+    first_scene = scenes[0]
+    scene_setting = first_scene.get("scene_setting", {})
+    timeline = first_scene.get("timeline", [])
+    first_sequence = timeline[0] if timeline else None
 
-    # Generate first frame
-    first_frame_bytes = generate_first_frame(characters, scene_setting)
+    # Generate first frame with full script context
+    first_frame_bytes = generate_first_frame(characters, scene_setting, first_sequence)
 
     # Save to job
     job.first_frame.save(
@@ -117,34 +120,35 @@ def regenerate_scene1(job: VideoGenerationJob) -> bytes:
 def regenerate_cta_last_frame(job: VideoGenerationJob) -> bytes:
     """Regenerate CTA last frame image using fal.ai Nano Banana.
 
-    Requires: job.scene1_last_frame (URL), job.effective_product_image_url
+    Requires: job.first_frame (URL), job.effective_product_image_url, job.script_json
     Updates: job.cta_last_frame
 
     Args:
-        job: VideoGenerationJob instance with scene1_last_frame
+        job: VideoGenerationJob instance with first_frame and script_json
 
     Returns:
         Generated CTA last frame image bytes
     """
-    if not job.scene1_last_frame:
-        raise ValueError("scene1_last_frame is required to regenerate CTA last frame")
+    if not job.first_frame:
+        raise ValueError("first_frame is required to regenerate CTA last frame")
 
     if not job.effective_product_image_url:
         raise ValueError("Product image URL is required to regenerate CTA last frame")
 
     # fal.ai accepts URLs directly
-    scene1_last_frame_url = job.scene1_last_frame.url
+    first_frame_url = job.first_frame.url
 
-    # Get CTA action from script
-    cta_action = _get_cta_action_from_script(job.script_json)
+    # Get Scene 2's last sequence and scene_setting from script
+    last_sequence, scene2_setting = _get_scene2_last_sequence(job.script_json)
 
     # Generate CTA last frame (fal.ai accepts URLs directly)
     cta_last_bytes = generate_cta_last_frame(
-        scene1_last_frame_url=scene1_last_frame_url,
+        first_frame_url=first_frame_url,
         product_image_url=job.effective_product_image_url,
         product_detail=job.product_detail or {},
-        characters=job.script_json.get("characters", {}) if job.script_json else {},
-        cta_action=cta_action,
+        characters=job.script_json.get("characters", []) if job.script_json else [],
+        last_sequence=last_sequence,
+        scene_setting=scene2_setting,
     )
 
     # Save to job
@@ -266,27 +270,28 @@ def regenerate_final_video(job: VideoGenerationJob) -> bytes:
         output_path.unlink(missing_ok=True)
 
 
-def _get_cta_action_from_script(script_json: dict | None) -> str | None:
-    """Extract CTA action description from script_json.
+def _get_scene2_last_sequence(script_json: dict | None) -> tuple[dict | None, dict | None]:
+    """Extract Scene 2's last sequence and scene_setting from script_json.
 
     Args:
         script_json: Script JSON from job
 
     Returns:
-        CTA action string or None
+        Tuple of (last_sequence, scene2_setting) or (None, None)
     """
     if not script_json:
-        return None
+        return None, None
 
     scenes = script_json.get("scenes", [])
     if len(scenes) < 2:
-        return None
+        return None, None
 
     scene2 = scenes[1]
+    scene2_setting = scene2.get("scene_setting", {})
     timeline = scene2.get("timeline", [])
     if not timeline:
-        return None
+        return None, scene2_setting
 
-    # Get the last sequence's action
+    # Get the last sequence (full data)
     last_seq = timeline[-1]
-    return last_seq.get("action", "")
+    return last_seq, scene2_setting

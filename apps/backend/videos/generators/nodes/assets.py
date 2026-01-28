@@ -140,19 +140,20 @@ def prepare_cta_frame(state: VideoGeneratorState) -> dict:
 
     Generates the CTA last frame using fal.ai Nano Banana.
     This frame shows the product reveal for Scene 2's ending.
+    Uses the first frame (not scene1 last frame) for character consistency.
     """
     log_separator("Step 2b: CTA Frame Preparation")
 
-    scene1_last_frame_url = state.get("scene1_last_frame_url")
+    first_frame_url = state.get("first_frame_url")
     product_image_url = state.get("product_image_url")
     product_detail = state.get("product_detail", {})
     script_json = state.get("script_json", {})
     characters = script_json.get("characters", {})
 
-    if not scene1_last_frame_url:
-        log("No scene1_last_frame_url available - Scene 1 may have failed", "ERROR")
+    if not first_frame_url:
+        log("No first_frame_url available - First frame preparation may have failed", "ERROR")
         return {
-            "error": "No scene1_last_frame_url available for CTA frame generation",
+            "error": "No first_frame_url available for CTA frame generation",
             "status": "cta_frame_preparation_failed",
         }
 
@@ -164,26 +165,28 @@ def prepare_cta_frame(state: VideoGeneratorState) -> dict:
         }
 
     try:
-        # Extract Scene 2's last timeline action for the CTA frame prompt
-        cta_action = None
+        # Extract Scene 2's last timeline sequence and scene_setting for the CTA frame prompt
+        last_sequence = None
+        scene2_setting = None
         scenes = script_json.get("scenes", [])
         if len(scenes) >= 2:
             scene2 = scenes[1]
+            scene2_setting = scene2.get("scene_setting", {})
             timeline = scene2.get("timeline", [])
             if timeline:
-                # Get the last sequence's action
-                last_seq = timeline[-1]
-                cta_action = last_seq.get("action", "")
-                log(f"CTA action from script: {cta_action[:100]}...")
+                # Get the last sequence (full data, not just action)
+                last_sequence = timeline[-1]
+                log(f"CTA last sequence - camera: {last_sequence.get('camera', 'N/A')}, mood: {last_sequence.get('mood', 'N/A')}")
 
         log("Generating CTA last frame with product image...")
         # fal.ai accepts URLs directly, no need to download and re-upload
         cta_last_frame_bytes = generate_cta_last_frame(
-            scene1_last_frame_url=scene1_last_frame_url,
+            first_frame_url=first_frame_url,
             product_image_url=product_image_url,
             product_detail=product_detail,
             characters=characters,
-            cta_action=cta_action,
+            last_sequence=last_sequence,
+            scene_setting=scene2_setting,
         )
         log("CTA last frame generated successfully", "SUCCESS")
 

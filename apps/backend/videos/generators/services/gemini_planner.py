@@ -391,35 +391,23 @@ def generate_first_frame(
     char_b_name = char_b.get("name", "Character B")
     char_b_desc = _build_character_description(char_b)
 
-    # Add first sequence character states if available
-    if first_sequence:
-        seq_a = first_sequence.get("A", {})
-        seq_b = first_sequence.get("B", {})
+    # Extract first sequence data
+    seq_a = first_sequence.get("A", {}) if first_sequence else {}
+    seq_b = first_sequence.get("B", {}) if first_sequence else {}
 
-        # Enhance character descriptions with their first frame state
-        if seq_a:
-            emotion_a = seq_a.get("emotion", "")
-            position_a = seq_a.get("position", "")
-            action_a = seq_a.get("action", "")
-            if emotion_a:
-                char_a_desc += f". Expression: {emotion_a}"
-            if position_a:
-                char_a_desc += f". Position: {position_a}"
-            if action_a:
-                char_a_desc += f". Action: {action_a}"
+    char_a_emotion = seq_a.get("emotion", "intense")
+    char_a_action = seq_a.get("action", "standing in confrontation pose")
+    char_a_position = seq_a.get("position", "left side of frame")
 
-        if seq_b:
-            emotion_b = seq_b.get("emotion", "")
-            position_b = seq_b.get("position", "")
-            action_b = seq_b.get("action", "")
-            if emotion_b:
-                char_b_desc += f". Expression: {emotion_b}"
-            if position_b:
-                char_b_desc += f". Position: {position_b}"
-            if action_b:
-                char_b_desc += f". Action: {action_b}"
+    char_b_emotion = seq_b.get("emotion", "tense")
+    char_b_action = seq_b.get("action", "standing in confrontation pose")
+    char_b_position = seq_b.get("position", "right side of frame")
 
-        log(f"First sequence - A: {seq_a.get('emotion', 'N/A')}, B: {seq_b.get('emotion', 'N/A')}")
+    camera = first_sequence.get("camera", "[TWO-SHOT]") if first_sequence else "[TWO-SHOT]"
+    mood = first_sequence.get("mood", "dramatic tension") if first_sequence else "dramatic tension"
+
+    log(f"First sequence - A: {char_a_emotion}, B: {char_b_emotion}")
+    log(f"Camera: {camera}, Mood: {mood}")
 
     location = scene_setting.get("location", "luxurious living room")
     lighting = scene_setting.get("lighting", "dramatic lighting")
@@ -429,8 +417,16 @@ def generate_first_frame(
         char_a_desc=char_a_desc,
         char_b_name=char_b_name,
         char_b_desc=char_b_desc,
+        char_a_emotion=char_a_emotion,
+        char_a_action=char_a_action,
+        char_a_position=char_a_position,
+        char_b_emotion=char_b_emotion,
+        char_b_action=char_b_action,
+        char_b_position=char_b_position,
         location=location,
         lighting=lighting,
+        camera=camera,
+        mood=mood,
     )
 
     log(f"Prompt: {prompt[:200]}...")
@@ -466,23 +462,25 @@ def generate_first_frame(
 
 
 def generate_cta_last_frame(
-    scene1_last_frame_url: str,
+    first_frame_url: str,
     product_image_url: str,
     product_detail: dict[str, Any],
     characters: list[dict[str, Any]],
-    cta_action: str | None = None,
+    last_sequence: dict[str, Any] | None = None,
+    scene_setting: dict[str, Any] | None = None,
 ) -> bytes:
-    """Generate CTA last frame by compositing scene1 last frame with product.
+    """Generate CTA last frame by compositing first frame with product.
 
     Uses fal.ai Nano Banana edit mode with multiple reference images to create a natural
     product placement scene that maintains character continuity.
 
     Args:
-        scene1_last_frame_url: URL of the last frame from Scene 1
+        first_frame_url: URL of the first frame (for character consistency)
         product_image_url: URL of the product image
         product_detail: Product information (name, description, key_benefit)
         characters: Character list for context (list with id 'A', 'B', etc.)
-        cta_action: Action/dialogue description from Scene 2's last timeline sequence
+        last_sequence: Last timeline sequence from Scene 2 with full character states
+        scene_setting: Scene 2's scene setting (location, lighting)
 
     Returns:
         Image bytes
@@ -490,7 +488,7 @@ def generate_cta_last_frame(
     log_separator("CTA Frame Generation (fal.ai)")
 
     log(f"Model: {FAL_IMAGE_EDIT_MODEL}")
-    log(f"Scene1 last frame URL: {scene1_last_frame_url[:60]}...")
+    log(f"First frame URL: {first_frame_url[:60]}...")
     log(f"Product image URL: {product_image_url[:60]}...")
 
     # Build product description
@@ -502,16 +500,42 @@ def generate_cta_last_frame(
     char_a_name = char_a.get("name", "Character A")
     char_b_name = char_b.get("name", "Character B")
 
-    action_desc = (
-        f"Scene context: {cta_action} "
-        if cta_action
-        else "The characters react with surprised, amused expressions. "
-    )
+    # Extract last sequence data for detailed prompt
+    seq_a = last_sequence.get("A", {}) if last_sequence else {}
+    seq_b = last_sequence.get("B", {}) if last_sequence else {}
+
+    char_a_emotion = seq_a.get("emotion", "amused surprise")
+    char_a_action = seq_a.get("action", "looking at product with surprised expression")
+    char_a_position = seq_a.get("position", "left side of frame")
+
+    char_b_emotion = seq_b.get("emotion", "relieved joy")
+    char_b_action = seq_b.get("action", "holding product naturally")
+    char_b_position = seq_b.get("position", "right side of frame")
+
+    camera = last_sequence.get("camera", "[TWO-SHOT]") if last_sequence else "[TWO-SHOT]"
+    mood = last_sequence.get("mood", "comedic twist ending") if last_sequence else "comedic twist ending"
+
+    # Scene setting
+    location = scene_setting.get("location", "same setting with warmer atmosphere") if scene_setting else "warm, bright setting"
+    lighting = scene_setting.get("lighting", "warm golden lighting") if scene_setting else "warm golden lighting"
+
+    log(f"Last sequence - A: {char_a_emotion}, B: {char_b_emotion}")
+    log(f"Camera: {camera}, Mood: {mood}")
+
     prompt = CTA_FRAME_PROMPT.format(
         char_a_name=char_a_name,
         char_b_name=char_b_name,
         product_name=product_name,
-        action_desc=action_desc,
+        char_a_emotion=char_a_emotion,
+        char_a_action=char_a_action,
+        char_a_position=char_a_position,
+        char_b_emotion=char_b_emotion,
+        char_b_action=char_b_action,
+        char_b_position=char_b_position,
+        location=location,
+        lighting=lighting,
+        camera=camera,
+        mood=mood,
     )
 
     log(f"Prompt: {prompt[:200]}...")
@@ -522,7 +546,7 @@ def generate_cta_last_frame(
             FAL_IMAGE_EDIT_MODEL,
             arguments={
                 "prompt": prompt,
-                "image_urls": [scene1_last_frame_url, product_image_url],
+                "image_urls": [first_frame_url, product_image_url],
                 "aspect_ratio": "9:16",
                 "output_format": "png",
             },

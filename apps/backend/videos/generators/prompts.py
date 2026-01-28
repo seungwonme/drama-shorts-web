@@ -677,11 +677,12 @@ FIRST_FRAME_PROMPT = ChatPromptTemplate.from_template(
     """A SINGLE continuous photorealistic scene (NOT a split screen, NOT a collage, NOT multiple panels). \
 Cinematic Korean drama moment in 9:16 portrait format for YouTube Shorts. \
 Setting: {location}. Lighting: {lighting}. \
-Two KOREAN people standing together in ONE unified scene: \
-On the LEFT - {char_a_name}: {char_a_desc}. \
-On the RIGHT - {char_b_name}: {char_b_desc}. \
+Scene mood: {mood}. \
+Camera: {camera}. \
+Two KOREAN people in ONE unified scene: \
+On the LEFT - {char_a_name}: {char_a_desc}. Emotion: {char_a_emotion}. Action: {char_a_action}. Position: {char_a_position}. \
+On the RIGHT - {char_b_name}: {char_b_desc}. Emotion: {char_b_emotion}. Action: {char_b_action}. Position: {char_b_position}. \
 Both characters MUST be ethnically Korean with East Asian features. \
-They are facing each other in a dramatic confrontation pose. \
 Shot on 50mm lens, medium shot waist-up, shallow depth of field with cinematic bokeh. \
 Natural skin texture, realistic fabric folds, subtle facial details. \
 Korean drama style cinematography, high quality, photorealistic. \
@@ -707,16 +708,15 @@ CTA_FRAME_PROMPT = ChatPromptTemplate.from_template(
 Korean drama comedic twist ending - the FINAL MOMENT of reconciliation. \
 IMPORTANT: Keep the EXACT SAME two characters ({char_a_name} and {char_b_name}) from the first reference image. \
 Their faces, clothing, and appearances must remain identical. \
-{action_desc}\
-The two main characters have amused, surprised expressions - this is the punchline moment. \
+Setting: {location}. Lighting: {lighting}. \
+Scene mood: {mood}. Camera: {camera}. \
+{char_a_name}: Emotion - {char_a_emotion}. Action - {char_a_action}. Position - {char_a_position}. \
+{char_b_name}: Emotion - {char_b_emotion}. Action - {char_b_action}. Position - {char_b_position}. \
 PRODUCT PLACEMENT: The product from the SECOND reference image ('{product_name}') appears naturally in the scene - \
 on a table nearby, casually in one character's hand, or visible in the background. \
 The product is part of the scene, not presented to camera like an advertisement. \
-NOTE: This is the final frame. The VIDEO leading up to this can include crowd reactions, \
-dramatic reveals, and comedic buildup - but this ending frame shows the calm after the storm. \
 9:16 portrait format. \
-Warm, golden lighting. Comedic Korean drama atmosphere. \
-High quality, photorealistic, 4K resolution."""
+High quality, photorealistic."""
 )
 
 

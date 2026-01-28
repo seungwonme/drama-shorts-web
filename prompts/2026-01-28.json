@@ -238,5 +238,20 @@
     "time": "06:19:52",
     "user": "seungwonan",
     "prompt": "MAKJANG_DRAMA_INSTRUCTIONS\n\n막장 형식 말고 '/Users/seungwonan/Dev/1-project/drama-shorts-web/a.md'\n\n이 형식으로 선택할 수 있게 해줘 "
+  },
+  {
+    "time": "07:36:41",
+    "user": "seungwonan",
+    "prompt": "현재 두 번째 씬의 마지막 CTA 프레임이 첫 번째 씬의 마지막 프레임을 토대로 만들어지는데 첫 번째 씬의 첫 번째 프레임으로 해줘"
+  },
+  {
+    "time": "07:39:26",
+    "user": "seungwonan",
+    "prompt": "continue"
+  },
+  {
+    "time": "07:41:32",
+    "user": "seungwonan",
+    "prompt": "첫 번째 씬의 첫 번째 프레임과 CTA 마지막 프레임 생성은 현재 대본을 모른 채로 생성되는데 대본에 맞게 생성되게 해줄래?"
   }
 ]

@@ -176,7 +176,7 @@ FAL_KEY             # fal.ai (Nano Banana 이미지 생성, Veo 영상 생성)
 | ------------------------ | ----------- | ------------------------------------- | --------------------------------------------- |
 | 첫 프레임 재생성         | Nano Banana | `script_json`                         | `first_frame`                                 |
 | Scene 1 재생성           | Veo         | `first_frame`, segment[0].prompt      | `segments[0].video_file`, `scene1_last_frame` |
-| CTA 마지막 프레임 재생성 | Nano Banana | `scene1_last_frame`, product_image    | `cta_last_frame`                              |
+| CTA 마지막 프레임 재생성 | Nano Banana | `first_frame`, product_image          | `cta_last_frame`                              |
 | Scene 2 재생성           | Veo         | `scene1_last_frame`, `cta_last_frame` | `segments[1].video_file`                      |
 | 최종 영상 병합           | FFmpeg      | segment videos                        | `final_video`                                 |
 
@@ -192,6 +192,47 @@ EC2_HOST, EC2_SSH_KEY
 ```
 
 # 프로젝트 변경 이력
+
+## 2026-01-28: 첫 프레임 및 CTA 프레임 대본 기반 생성
+
+### 변경 파일
+- `apps/backend/videos/generators/prompts.py`
+- `apps/backend/videos/generators/services/gemini_planner.py`
+- `apps/backend/videos/generators/nodes/assets.py`
+- `apps/backend/videos/rework_services.py`
+
+### 변경 내용
+
+#### 1. CTA 프레임 기준 변경
+- **변경 전**: `scene1_last_frame_url` 사용 (Scene 1 영상의 마지막 프레임)
+- **변경 후**: `first_frame_url` 사용 (Scene 1 시작 프레임)
+- 이유: 캐릭터 일관성 유지
+
+#### 2. 첫 프레임 생성 시 대본 정보 반영
+**변경 전**: 캐릭터 외모와 위치/조명만 사용
+
+**변경 후**: Scene 1의 첫 번째 시퀀스 전체 정보 활용
+- `camera`: 카메라 앵글 (예: "[CU on A]", "[TWO-SHOT]")
+- `mood`: 씬 분위기 (예: "Icy contempt")
+- `A.emotion`, `A.action`, `A.position`: 캐릭터 A의 상태
+- `B.emotion`, `B.action`, `B.position`: 캐릭터 B의 상태
+
+#### 3. CTA 프레임 생성 시 대본 정보 반영
+**변경 전**: `cta_action` (Scene 2 마지막 시퀀스의 action 필드만)
+
+**변경 후**: Scene 2의 마지막 시퀀스 전체 정보 + scene_setting 활용
+- `scene_setting.location`, `scene_setting.lighting`
+- `camera`, `mood`
+- `A.emotion`, `A.action`, `A.position`
+- `B.emotion`, `B.action`, `B.position`
+
+#### 4. 프롬프트 템플릿 개선
+`FIRST_FRAME_PROMPT`와 `CTA_FRAME_PROMPT`에 새 필드 추가:
+- `{mood}`, `{camera}`
+- `{char_a_emotion}`, `{char_a_action}`, `{char_a_position}`
+- `{char_b_emotion}`, `{char_b_action}`, `{char_b_position}`
+
+---
 
 ## 2026-01-28: 영상 생성 프롬프트 개선
 
