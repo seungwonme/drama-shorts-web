@@ -7,6 +7,17 @@ from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
 
 from .models import Product, ProductImage, VideoAsset, VideoGenerationJob, VideoSegment
+from .status_config import (
+    IN_PROGRESS_STATUSES,
+    PROGRESS_PERCENTAGES,
+    PROGRESS_STEPS,
+    STATUS_COLORS,
+    STATUS_ORDER,
+    get_progress_percent,
+    get_status_color,
+    get_status_order,
+    is_in_progress,
+)
 
 # Group 모델 숨기기 (사용하지 않음)
 admin.site.unregister(Group)
@@ -470,15 +481,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
             return self._get_rework_action_names(job)
 
         # 진행중 상태: 취소 액션
-        in_progress_statuses = [
-            VideoGenerationJob.Status.PLANNING,
-            VideoGenerationJob.Status.PREPARING,
-            VideoGenerationJob.Status.GENERATING_S1,
-            VideoGenerationJob.Status.PREPARING_CTA,
-            VideoGenerationJob.Status.GENERATING_S2,
-            VideoGenerationJob.Status.CONCATENATING,
-        ]
-        if job.status in in_progress_statuses:
+        if is_in_progress(job.status):
             return ["cancel_video_action"]
 
         return []
@@ -563,11 +566,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
     def generate_video_action(self, request, object_id):
         from django.shortcuts import redirect
 
-        from .services import (
-            generate_video_sync,
-            generate_video_with_resume,
-            get_resume_entry_point,
-        )
+        from .services import generate_video_async, get_resume_entry_point
 
         job = self.get_object(request, object_id)
 
@@ -595,18 +594,21 @@ class VideoGenerationJobAdmin(ModelAdmin):
             and entry_point != "plan_script"
         )
 
-        try:
-            if should_resume:
-                generate_video_with_resume(job)
-                self.message_user(
-                    request,
-                    f"Job #{job.id} 영상 생성 완료 (재개 지점: {entry_point})",
-                )
-            else:
-                generate_video_sync(job)
-                self.message_user(request, f"Job #{job.id} 영상 생성 완료")
-        except Exception as e:
-            self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
+        # 비동기 실행 - 즉시 응답하고 백그라운드에서 처리
+        generate_video_async(job.id, resume=should_resume)
+
+        if should_resume:
+            self.message_user(
+                request,
+                f"Job #{job.id} 영상 생성 시작됨 (재개 지점: {entry_point}). 진행 상황은 자동으로 업데이트됩니다.",
+                level="success",
+            )
+        else:
+            self.message_user(
+                request,
+                f"Job #{job.id} 영상 생성 시작됨. 진행 상황은 자동으로 업데이트됩니다.",
+                level="success",
+            )
 
         return redirect(request.META.get("HTTP_REFERER", ".."))
 
@@ -614,7 +616,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
     def resume_video_action(self, request, object_id):
         from django.shortcuts import redirect
 
-        from .services import generate_video_with_resume, get_resume_entry_point
+        from .services import generate_video_async, get_resume_entry_point
 
         job = self.get_object(request, object_id)
 
@@ -637,15 +639,19 @@ class VideoGenerationJobAdmin(ModelAdmin):
             )
             return redirect(request.META.get("HTTP_REFERER", ".."))
 
-        # 실제 작업 수행
-        try:
-            generate_video_with_resume(job)
-            self.message_user(
-                request,
-                f"Job #{job.id} 영상 생성 완료 (재개 지점: {entry_point})",
-            )
-        except Exception as e:
-            self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
+        # 에러 메시지 초기화
+        job.error_message = ""
+        job.current_step = "재개 중..."
+        job.save(update_fields=["current_step", "error_message"])
+
+        # 비동기 실행
+        generate_video_async(job.id, resume=True)
+
+        self.message_user(
+            request,
+            f"Job #{job.id} 재개됨 (재개 지점: {entry_point}). 진행 상황은 자동으로 업데이트됩니다.",
+            level="success",
+        )
 
         return redirect(request.META.get("HTTP_REFERER", ".."))
 
@@ -656,16 +662,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
         job = self.get_object(request, object_id)
 
         # 진행중 상태에서만 취소 가능
-        in_progress_statuses = [
-            VideoGenerationJob.Status.PLANNING,
-            VideoGenerationJob.Status.PREPARING,
-            VideoGenerationJob.Status.GENERATING_S1,
-            VideoGenerationJob.Status.PREPARING_CTA,
-            VideoGenerationJob.Status.GENERATING_S2,
-            VideoGenerationJob.Status.CONCATENATING,
-        ]
-
-        if job.status not in in_progress_statuses:
+        if not is_in_progress(job.status):
             self.message_user(
                 request,
                 f"Job #{job.id}은(는) 진행중 상태가 아닙니다. (현재: {job.get_status_display()})",
@@ -833,11 +830,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
     @admin.action(description="선택된 작업 영상 생성/재시도")
     def bulk_generate_video_action(self, request, queryset):
         """선택된 PENDING 또는 FAILED 작업들의 영상 생성 (실패 시 자동 재개)"""
-        from .services import (
-            generate_video_sync,
-            generate_video_with_resume,
-            get_resume_entry_point,
-        )
+        from .services import generate_video_async, get_resume_entry_point
 
         allowed_statuses = [VideoGenerationJob.Status.PENDING, VideoGenerationJob.Status.FAILED]
         eligible_jobs = queryset.filter(status__in=allowed_statuses)
@@ -847,30 +840,29 @@ class VideoGenerationJobAdmin(ModelAdmin):
             self.message_user(request, "대기중 또는 실패한 작업이 없습니다.", level="warning")
             return
 
-        success = 0
+        started = 0
         for job in eligible_jobs:
-            try:
-                job.current_step = "시작 중..."
-                job.error_message = ""
-                job.save(update_fields=["current_step", "error_message"])
+            job.current_step = "시작 중..."
+            job.error_message = ""
+            job.save(update_fields=["current_step", "error_message"])
 
-                # 실패 지점이 있고 중간 단계라면 자동으로 재개
-                entry_point = get_resume_entry_point(job)
-                should_resume = (
-                    job.status == VideoGenerationJob.Status.FAILED
-                    and job.failed_at_status
-                    and entry_point != "plan_script"
-                )
+            # 실패 지점이 있고 중간 단계라면 자동으로 재개
+            entry_point = get_resume_entry_point(job)
+            should_resume = (
+                job.status == VideoGenerationJob.Status.FAILED
+                and job.failed_at_status
+                and entry_point != "plan_script"
+            )
 
-                if should_resume:
-                    generate_video_with_resume(job)
-                else:
-                    generate_video_sync(job)
-                success += 1
-            except Exception:
-                pass  # 에러는 서비스에서 저장됨
+            # 비동기 실행
+            generate_video_async(job.id, resume=should_resume)
+            started += 1
 
-        self.message_user(request, f"{success}/{count}개 영상 생성 완료")
+        self.message_user(
+            request,
+            f"{started}개 작업 시작됨. 진행 상황은 목록에서 자동으로 업데이트됩니다.",
+            level="success",
+        )
 
     @admin.action(description="선택된 작업 삭제")
     def bulk_delete_selected(self, request, queryset):
@@ -905,14 +897,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
             buttons.append(
                 f'<a href="{url}" class="px-3 py-1 bg-orange-600 text-white rounded-md text-xs font-medium hover:bg-orange-700">재시도</a>'
             )
-        elif obj.status in [
-            VideoGenerationJob.Status.PLANNING,
-            VideoGenerationJob.Status.PREPARING,
-            VideoGenerationJob.Status.GENERATING_S1,
-            VideoGenerationJob.Status.PREPARING_CTA,
-            VideoGenerationJob.Status.GENERATING_S2,
-            VideoGenerationJob.Status.CONCATENATING,
-        ]:
+        elif is_in_progress(obj.status):
             url = reverse("admin:videos_videogenerationjob_cancel_video_action", args=[obj.pk])
             buttons.append(
                 f'<a href="{url}" class="px-3 py-1 bg-gray-600 text-white rounded-md text-xs font-medium hover:bg-gray-700">취소</a>'
@@ -943,18 +928,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
     def _render_status_badge(self, obj):
         """Render status badge HTML with HTMX attributes."""
-        colors = {
-            VideoGenerationJob.Status.PENDING: "bg-gray-100 text-gray-700",
-            VideoGenerationJob.Status.PLANNING: "bg-blue-100 text-blue-700",
-            VideoGenerationJob.Status.PREPARING: "bg-blue-100 text-blue-700",
-            VideoGenerationJob.Status.GENERATING_S1: "bg-yellow-100 text-yellow-700",
-            VideoGenerationJob.Status.PREPARING_CTA: "bg-blue-100 text-blue-700",
-            VideoGenerationJob.Status.GENERATING_S2: "bg-yellow-100 text-yellow-700",
-            VideoGenerationJob.Status.CONCATENATING: "bg-yellow-100 text-yellow-700",
-            VideoGenerationJob.Status.COMPLETED: "bg-green-100 text-green-700",
-            VideoGenerationJob.Status.FAILED: "bg-red-100 text-red-700",
-        }
-        css_class = colors.get(obj.status, "bg-gray-100 text-gray-700")
+        css_class = get_status_color(obj.status)
         hx_attrs = self._get_htmx_attrs(obj, "status")
         return f'<span class="{css_class} px-2 py-1 rounded-md text-xs font-medium" {hx_attrs}>{obj.get_status_display()}</span>'
 
@@ -966,23 +940,12 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
     def _render_progress_bar(self, obj):
         """Render progress bar HTML with HTMX attributes."""
-        progress_map = {
-            VideoGenerationJob.Status.PENDING: 0,
-            VideoGenerationJob.Status.PLANNING: 14,
-            VideoGenerationJob.Status.PREPARING: 28,
-            VideoGenerationJob.Status.GENERATING_S1: 42,
-            VideoGenerationJob.Status.PREPARING_CTA: 57,
-            VideoGenerationJob.Status.GENERATING_S2: 71,
-            VideoGenerationJob.Status.CONCATENATING: 86,
-            VideoGenerationJob.Status.COMPLETED: 100,
-            VideoGenerationJob.Status.FAILED: 0,
-        }
-        progress = progress_map.get(obj.status, 0)
+        progress = get_progress_percent(obj.status)
         hx_attrs = self._get_htmx_attrs(obj, "progress")
 
         # Failed state
         if obj.status == VideoGenerationJob.Status.FAILED:
-            failed_progress = progress_map.get(obj.failed_at_status, 0)
+            failed_progress = get_progress_percent(obj.failed_at_status) if obj.failed_at_status else 0
             if failed_progress > 0:
                 return f"""<div {hx_attrs}>
                     <div style="width: 100px; height: 8px; background: #fee2e2; border-radius: 4px; overflow: hidden;">
@@ -1093,108 +1056,100 @@ class VideoGenerationJobAdmin(ModelAdmin):
     def _render_progress_steps(self, obj):
         """Render progress steps HTML with HTMX attributes."""
         hx_attrs = self._get_htmx_attrs(obj, "progress-steps")
-
-        # 단계 정의 (7단계)
-        steps = [
-            ("pending", "대기", "작업이 대기열에 있습니다"),
-            ("planning", "기획", "Gemini AI가 스크립트를 기획합니다"),
-            ("preparing", "첫 프레임", "첫 프레임 이미지를 생성합니다"),
-            ("generating_s1", "Scene 1", "Veo로 Scene 1 영상을 생성합니다"),
-            ("preparing_cta", "CTA 프레임", "제품 CTA 프레임을 생성합니다"),
-            ("generating_s2", "Scene 2", "Veo로 Scene 2 영상을 생성합니다"),
-            ("concatenating", "병합", "영상을 병합하고 효과음을 추가합니다"),
-            ("completed", "완료", "영상 생성이 완료되었습니다"),
-        ]
-
-        # 상태별 순서
-        status_order = {
-            VideoGenerationJob.Status.PENDING: 0,
-            VideoGenerationJob.Status.PLANNING: 1,
-            VideoGenerationJob.Status.PREPARING: 2,
-            VideoGenerationJob.Status.GENERATING_S1: 3,
-            VideoGenerationJob.Status.PREPARING_CTA: 4,
-            VideoGenerationJob.Status.GENERATING_S2: 5,
-            VideoGenerationJob.Status.CONCATENATING: 6,
-            VideoGenerationJob.Status.COMPLETED: 7,
-            VideoGenerationJob.Status.FAILED: -1,
-        }
-
-        current_order = status_order.get(obj.status, 0)
+        current_order = get_status_order(obj.status)
 
         # 실패 상태: 실패 지점까지 진행 상황 표시
         if obj.status == VideoGenerationJob.Status.FAILED:
-            failed_order = status_order.get(obj.failed_at_status, 0)
-            # 실패 지점까지의 진행률
-            progress_percent = min(100, (failed_order / 7) * 100) if failed_order > 0 else 0
+            return self._render_failed_progress_steps(obj, hx_attrs)
 
-            # 에러 메시지 박스
-            error_html = f"""
-            <div style="padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 16px;">
-                <div style="display: flex; align-items: center; gap: 8px; color: #dc2626; font-weight: 600;">
-                    <span style="font-size: 20px;">&#10060;</span>
-                    <span>영상 생성 실패</span>
-                </div>
-                <div style="margin-top: 8px; color: #7f1d1d; font-size: 14px;">
-                    {obj.error_message or '알 수 없는 오류가 발생했습니다.'}
-                </div>
+        # 정상 상태: 현재 진행 상황 표시
+        return self._render_normal_progress_steps(obj, hx_attrs, current_order)
+
+    def _render_error_box(self, error_message: str) -> str:
+        """Render error message box HTML."""
+        return f"""
+        <div style="padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #dc2626; font-weight: 600;">
+                <span style="font-size: 20px;">&#10060;</span>
+                <span>영상 생성 실패</span>
             </div>
-            """
-
-            # 진행 바 (with HTMX wrapper)
-            html = f"""<div {hx_attrs}>{error_html}
-            <div style="margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="font-size: 14px; font-weight: 600; color: #374151;">진행률 (실패 시점)</span>
-                    <span style="font-size: 14px; font-weight: 600; color: #ef4444;">{int(progress_percent)}%</span>
-                </div>
-                <div style="width: 100%; height: 12px; background: #fee2e2; border-radius: 6px; overflow: hidden;">
-                    <div style="width: {progress_percent}%; height: 100%; background: #ef4444; border-radius: 6px;"></div>
-                </div>
+            <div style="margin-top: 8px; color: #7f1d1d; font-size: 14px;">
+                {error_message or '알 수 없는 오류가 발생했습니다.'}
             </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-            """
+        </div>
+        """
 
-            # 단계별 표시 (실패 지점까지)
-            for i, (status_key, label, description) in enumerate(steps):
-                if i < failed_order:
-                    # 완료된 단계
-                    icon = "&#10004;"
-                    bg_color = "#dcfce7"
-                    border_color = "#22c55e"
-                    icon_color = "#22c55e"
-                    text_color = "#166534"
-                elif i == failed_order:
-                    # 실패한 단계
-                    icon = "&#10060;"
-                    bg_color = "#fef2f2"
-                    border_color = "#ef4444"
-                    icon_color = "#ef4444"
-                    text_color = "#991b1b"
-                else:
-                    # 대기 단계
-                    icon = "&#9675;"
-                    bg_color = "#f9fafb"
-                    border_color = "#e5e7eb"
-                    icon_color = "#9ca3af"
-                    text_color = "#6b7280"
+    def _render_detail_progress_bar(self, progress_percent: int, label: str, color: str, bg_color: str) -> str:
+        """Render a progress bar HTML for detail page."""
+        return f"""
+        <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 14px; font-weight: 600; color: #374151;">{label}</span>
+                <span style="font-size: 14px; font-weight: 600; color: {color};">{int(progress_percent)}%</span>
+            </div>
+            <div style="width: 100%; height: 12px; background: {bg_color}; border-radius: 6px; overflow: hidden;">
+                <div style="width: {progress_percent}%; height: 100%; background: {color}; border-radius: 6px;"></div>
+            </div>
+        </div>
+        """
 
-                html += f"""
-                <div style="padding: 12px; background: {bg_color}; border: 2px solid {border_color}; border-radius: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 18px; color: {icon_color};">{icon}</span>
-                        <span style="font-weight: 600; color: {text_color};">{label}</span>
-                    </div>
-                    <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{description}</div>
-                </div>
-                """
+    def _get_step_style(self, step_index: int, current_order: int, is_failed: bool = False) -> tuple[str, str, str, str, str]:
+        """Get step card styling based on status.
 
-            html += "</div></div>"
-            return html
+        Returns:
+            Tuple of (icon, bg_color, border_color, icon_color, text_color)
+        """
+        if step_index < current_order:
+            # 완료된 단계
+            return "&#10004;", "#dcfce7", "#22c55e", "#22c55e", "#166534"
+        elif step_index == current_order:
+            if is_failed:
+                # 실패한 단계
+                return "&#10060;", "#fef2f2", "#ef4444", "#ef4444", "#991b1b"
+            else:
+                # 현재 단계
+                return "&#9679;", "#dbeafe", "#3b82f6", "#3b82f6", "#1e40af"
+        else:
+            # 대기 단계
+            return "&#9675;", "#f9fafb", "#e5e7eb", "#9ca3af", "#6b7280"
 
-        # 진행 바 (7단계) - with HTMX wrapper
+    def _render_step_card(self, label: str, description: str, icon: str, bg_color: str,
+                          border_color: str, icon_color: str, text_color: str, step_info: str = "") -> str:
+        """Render a single step card HTML."""
+        return f"""
+        <div style="padding: 12px; background: {bg_color}; border: 2px solid {border_color}; border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px; color: {icon_color};">{icon}</span>
+                <span style="font-weight: 600; color: {text_color};">{label}</span>
+            </div>
+            <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{description}</div>
+            {step_info}
+        </div>
+        """
+
+    def _render_failed_progress_steps(self, obj, hx_attrs: str) -> str:
+        """Render progress steps for failed status."""
+        failed_order = get_status_order(obj.failed_at_status) if obj.failed_at_status else 0
+        progress_percent = min(100, (failed_order / 7) * 100) if failed_order > 0 else 0
+
+        error_html = self._render_error_box(obj.error_message)
+        progress_bar = self._render_detail_progress_bar(progress_percent, "진행률 (실패 시점)", "#ef4444", "#fee2e2")
+
+        html = f'<div {hx_attrs}>{error_html}{progress_bar}<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">'
+
+        for i, (status_key, label, description) in enumerate(PROGRESS_STEPS):
+            icon, bg_color, border_color, icon_color, text_color = self._get_step_style(i, failed_order, is_failed=True)
+            html += self._render_step_card(label, description, icon, bg_color, border_color, icon_color, text_color)
+
+        html += "</div></div>"
+        return html
+
+    def _render_normal_progress_steps(self, obj, hx_attrs: str, current_order: int) -> str:
+        """Render progress steps for normal status."""
         progress_percent = min(100, (current_order / 7) * 100)
 
-        html = f"""<div {hx_attrs}>
+        # Use gradient for normal progress
+        progress_bar_html = f"""
         <div style="margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="font-size: 14px; font-weight: 600; color: #374151;">전체 진행률</span>
@@ -1204,47 +1159,19 @@ class VideoGenerationJobAdmin(ModelAdmin):
                 <div style="width: {progress_percent}%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 6px; transition: width 0.5s ease;"></div>
             </div>
         </div>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
         """
 
-        for i, (status_key, label, description) in enumerate(steps):
-            if i < current_order:
-                # 완료된 단계
-                icon = "&#10004;"
-                bg_color = "#dcfce7"
-                border_color = "#22c55e"
-                icon_color = "#22c55e"
-                text_color = "#166534"
-            elif i == current_order:
-                # 현재 단계
-                icon = "&#9679;"
-                bg_color = "#dbeafe"
-                border_color = "#3b82f6"
-                icon_color = "#3b82f6"
-                text_color = "#1e40af"
-            else:
-                # 대기 단계
-                icon = "&#9675;"
-                bg_color = "#f9fafb"
-                border_color = "#e5e7eb"
-                icon_color = "#9ca3af"
-                text_color = "#6b7280"
+        html = f'<div {hx_attrs}>{progress_bar_html}<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">'
+
+        for i, (status_key, label, description) in enumerate(PROGRESS_STEPS):
+            icon, bg_color, border_color, icon_color, text_color = self._get_step_style(i, current_order)
 
             # 현재 단계면 current_step 표시
             step_info = ""
             if i == current_order and obj.current_step:
                 step_info = f'<div style="font-size: 11px; color: #3b82f6; margin-top: 4px;">{obj.current_step}</div>'
 
-            html += f"""
-            <div style="padding: 12px; background: {bg_color}; border: 2px solid {border_color}; border-radius: 8px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px; color: {icon_color};">{icon}</span>
-                    <span style="font-weight: 600; color: {text_color};">{label}</span>
-                </div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{description}</div>
-                {step_info}
-            </div>
-            """
+            html += self._render_step_card(label, description, icon, bg_color, border_color, icon_color, text_color, step_info)
 
         html += "</div></div>"
         return html

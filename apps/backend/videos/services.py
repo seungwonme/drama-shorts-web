@@ -12,17 +12,7 @@ from .generators.nodes import (
     prepare_first_frame,
 )
 from .generators.state import SegmentVideo, VideoGeneratorState
-
-
-# Node execution order
-NODE_ORDER = [
-    "plan_script",
-    "prepare_first_frame",
-    "generate_scene1",
-    "prepare_cta_frame",
-    "generate_scene2",
-    "concatenate_videos",
-]
+from .status_config import NODE_ORDER, NODE_TO_STATUS, get_resume_node
 
 # Map node names to functions
 NODE_FUNCTIONS = {
@@ -35,6 +25,84 @@ NODE_FUNCTIONS = {
 }
 
 
+def _generate_video(job, start_from: str | None = None):
+    """Core video generation logic.
+
+    Executes nodes sequentially, saving results after each step.
+
+    Args:
+        job: VideoGenerationJob instance
+        start_from: Node name to start from (None = start from beginning)
+    """
+    from .models import VideoGenerationJob
+
+    try:
+        # Build initial or resume state
+        if start_from is None:
+            current_state = _build_initial_state(job)
+            nodes_to_execute = NODE_ORDER
+        else:
+            current_state = _build_resume_state(job)
+            job.error_message = ""
+            job.save()
+            start_idx = NODE_ORDER.index(start_from)
+            nodes_to_execute = NODE_ORDER[start_idx:]
+
+        # Execute nodes sequentially
+        for node_name in nodes_to_execute:
+            _update_job_status_for_node(job, node_name)
+
+            node_func = NODE_FUNCTIONS[node_name]
+            result = node_func(current_state)
+
+            current_state = _save_and_inject_urls(job, node_name, result, current_state)
+
+            if result.get("error"):
+                _handle_node_error(job, result["error"])
+                raise RuntimeError(result["error"])
+
+        _mark_completed(job)
+
+    except Exception as e:
+        _handle_exception(job, e)
+        raise
+
+
+def _handle_node_error(job, error_message: str):
+    """Handle error returned from a node."""
+    from .models import VideoGenerationJob
+
+    job.failed_at_status = job.status
+    job.status = VideoGenerationJob.Status.FAILED
+    job.error_message = error_message
+    job.save()
+
+
+def _handle_exception(job, exception: Exception):
+    """Handle unexpected exception during generation."""
+    import traceback
+
+    from .models import VideoGenerationJob
+
+    traceback.print_exc()
+
+    if not job.failed_at_status:
+        job.failed_at_status = job.status
+    job.status = VideoGenerationJob.Status.FAILED
+    job.error_message = str(exception)
+    job.save()
+
+
+def _mark_completed(job):
+    """Mark job as successfully completed."""
+    from .models import VideoGenerationJob
+
+    job.status = VideoGenerationJob.Status.COMPLETED
+    job.current_step = "완료"
+    job.failed_at_status = ""
+    job.save()
+
+
 def generate_video_sync(job):
     """동기식 영상 생성 with incremental saving.
 
@@ -44,47 +112,7 @@ def generate_video_sync(job):
     Args:
         job: VideoGenerationJob 인스턴스
     """
-    from .models import VideoGenerationJob
-
-    try:
-        # 초기 상태 설정
-        current_state = _build_initial_state(job)
-
-        # 노드 순차 실행
-        for node_name in NODE_ORDER:
-            # 상태 업데이트
-            _update_job_status_for_node(job, node_name)
-
-            # 노드 함수 실행
-            node_func = NODE_FUNCTIONS[node_name]
-            result = node_func(current_state)
-
-            # 결과를 DB/S3에 저장하고 URL을 state에 주입
-            current_state = _save_and_inject_urls(job, node_name, result, current_state)
-
-            # 에러 체크
-            if result.get("error"):
-                job.failed_at_status = job.status
-                job.status = VideoGenerationJob.Status.FAILED
-                job.error_message = result["error"]
-                job.save()
-                raise RuntimeError(result["error"])
-
-        job.status = VideoGenerationJob.Status.COMPLETED
-        job.current_step = "완료"
-        job.failed_at_status = ""
-        job.save()
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-
-        if not job.failed_at_status:
-            job.failed_at_status = job.status
-        job.status = VideoGenerationJob.Status.FAILED
-        job.error_message = str(e)
-        job.save()
-        raise
+    _generate_video(job, start_from=None)
 
 
 def _build_initial_state(job) -> VideoGeneratorState:
@@ -119,19 +147,8 @@ def _build_initial_state(job) -> VideoGeneratorState:
 
 def _update_job_status_for_node(job, node_name: str):
     """Update job status based on current node."""
-    from .models import VideoGenerationJob
-
-    status_map = {
-        "plan_script": (VideoGenerationJob.Status.PLANNING, "AI 스크립트 기획"),
-        "prepare_first_frame": (VideoGenerationJob.Status.PREPARING, "첫 프레임 생성"),
-        "generate_scene1": (VideoGenerationJob.Status.GENERATING_S1, "Scene 1 생성"),
-        "prepare_cta_frame": (VideoGenerationJob.Status.PREPARING_CTA, "CTA 프레임 생성"),
-        "generate_scene2": (VideoGenerationJob.Status.GENERATING_S2, "Scene 2 생성"),
-        "concatenate_videos": (VideoGenerationJob.Status.CONCATENATING, "영상 병합"),
-    }
-
-    if node_name in status_map:
-        job.status, job.current_step = status_map[node_name]
+    if node_name in NODE_TO_STATUS:
+        job.status, job.current_step = NODE_TO_STATUS[node_name]
         job.save()
 
 
@@ -294,23 +311,11 @@ def _create_video_segments(job, segments_data: list):
 
 def get_resume_entry_point(job) -> str:
     """Return the node to resume from based on failure point."""
-    from .models import VideoGenerationJob
-
     resume_status = job.failed_at_status or job.status
-
-    resume_map = {
-        VideoGenerationJob.Status.PENDING: "plan_script",
-        VideoGenerationJob.Status.PLANNING: "plan_script",
-        VideoGenerationJob.Status.PREPARING: "prepare_first_frame",
-        VideoGenerationJob.Status.GENERATING_S1: "generate_scene1",
-        VideoGenerationJob.Status.PREPARING_CTA: "prepare_cta_frame",
-        VideoGenerationJob.Status.GENERATING_S2: "generate_scene2",
-        VideoGenerationJob.Status.CONCATENATING: "concatenate_videos",
-    }
-    return resume_map.get(resume_status, "plan_script")
+    return get_resume_node(resume_status)
 
 
-def build_resume_state(job) -> dict:
+def _build_resume_state(job) -> dict:
     """Build state from DB for resuming from failure point.
 
     Uses FileField.url directly - no bytes download needed.
@@ -379,61 +384,17 @@ def generate_video_with_resume(job):
 
     Loads existing results from DB and resumes from the failed node.
     """
-    from .models import VideoGenerationJob
+    entry_point = get_resume_entry_point(job)
 
-    try:
-        # Get resume point
-        entry_point = get_resume_entry_point(job)
+    # Start from beginning if needed
+    if entry_point == "plan_script":
+        return generate_video_sync(job)
 
-        # Start from beginning if needed
-        if entry_point == "plan_script":
-            return generate_video_sync(job)
+    _generate_video(job, start_from=entry_point)
 
-        # Build resume state with URLs
-        current_state = build_resume_state(job)
 
-        # Clear error message
-        job.error_message = ""
-        job.save()
-
-        # Find entry point index
-        start_idx = NODE_ORDER.index(entry_point)
-
-        # Execute from entry point
-        for node_name in NODE_ORDER[start_idx:]:
-            # Update status
-            _update_job_status_for_node(job, node_name)
-
-            # Execute node
-            node_func = NODE_FUNCTIONS[node_name]
-            result = node_func(current_state)
-
-            # Save and inject URLs
-            current_state = _save_and_inject_urls(job, node_name, result, current_state)
-
-            # Check for errors
-            if result.get("error"):
-                job.failed_at_status = job.status
-                job.status = VideoGenerationJob.Status.FAILED
-                job.error_message = result["error"]
-                job.save()
-                raise RuntimeError(result["error"])
-
-        job.status = VideoGenerationJob.Status.COMPLETED
-        job.current_step = "완료"
-        job.failed_at_status = ""
-        job.save()
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-
-        if not job.failed_at_status:
-            job.failed_at_status = job.status
-        job.status = VideoGenerationJob.Status.FAILED
-        job.error_message = str(e)
-        job.save()
-        raise
+# Public alias for backwards compatibility
+build_resume_state = _build_resume_state
 
 
 def generate_video_sync_simple(job):
@@ -444,3 +405,51 @@ def generate_video_sync_simple(job):
     """
     # Redirect to the main function
     return generate_video_sync(job)
+
+
+# =============================================================================
+# Async Video Generation (for real-time UI updates)
+# =============================================================================
+
+
+def generate_video_async(job_id: int, resume: bool = False):
+    """Run video generation in a background thread.
+
+    This allows the HTTP response to return immediately while the video
+    generation continues in the background. HTMX polling will show
+    real-time status updates.
+
+    Args:
+        job_id: ID of the VideoGenerationJob to process
+        resume: If True, resume from failure point instead of starting fresh
+    """
+    import threading
+
+    from django import db
+
+    def _run_in_thread():
+        # Close old database connections to avoid threading issues
+        db.connections.close_all()
+
+        from .models import VideoGenerationJob
+
+        try:
+            job = VideoGenerationJob.objects.get(pk=job_id)
+
+            if resume:
+                entry_point = get_resume_entry_point(job)
+                if entry_point == "plan_script":
+                    generate_video_sync(job)
+                else:
+                    _generate_video(job, start_from=entry_point)
+            else:
+                generate_video_sync(job)
+        except VideoGenerationJob.DoesNotExist:
+            pass  # Job was deleted
+        except Exception:
+            pass  # Errors are already saved to the job by _handle_exception
+        finally:
+            db.connections.close_all()
+
+    thread = threading.Thread(target=_run_in_thread, daemon=True)
+    thread.start()

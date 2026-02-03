@@ -1,5 +1,5 @@
 #!/bin/bash
-# 로컬 Docker 실행 스크립트
+# 배포 환경 Docker 실행 스크립트
 
 set -e
 

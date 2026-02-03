@@ -42,8 +42,10 @@ drama-shorts-web/
 │   ├── videos/                   # 영상 생성 앱
 │   │   ├── models.py             # Product, ProductImage, VideoGenerationJob, VideoSegment
 │   │   ├── admin.py              # Admin UI + 영상 생성/재작업 액션
-│   │   ├── services.py           # LangGraph 워크플로우 실행 + Django 모델 저장
+│   │   ├── services.py           # 노드 순차 실행 + Django 모델 저장
 │   │   ├── rework_services.py    # 단계별 재작업 서비스 (첫 프레임, Scene 1/2, CTA, 병합)
+│   │   ├── status_config.py      # Status 설정 중앙화 (NODE_ORDER, STATUS_COLORS 등)
+│   │   ├── constants.py          # 상수 정의 (타임아웃, 재시도 횟수 등)
 │   │   └── generators/           # 영상 생성 패키지 (구 drama-shorts)
 │   │       ├── graph.py          # LangGraph 워크플로우 정의
 │   │       ├── state.py          # VideoGeneratorState (URL 기반)
@@ -347,3 +349,169 @@ AI가 감정을 애매하게 섞지 않도록 제약:
 - 각 2초 시퀀스마다 캐릭터별 행동/대사/감정/위치를 독립적으로 관리
 - Veo 3.1 화자 혼동 문제 해결 (대사가 캐릭터별로 명확히 분리)
 - 감정 변화를 시퀀스별로 세밀하게 표현 가능
+
+---
+
+## 2026-02-03: 코드 리팩토링 - 중복 제거 및 구조 개선
+
+### 신규 파일
+- `apps/backend/videos/status_config.py` - Status 설정 중앙화
+- `apps/backend/videos/constants.py` - 상수 중앙화
+
+### 변경 파일
+- `apps/backend/videos/services.py`
+- `apps/backend/videos/admin.py`
+- `apps/backend/videos/generators/nodes/video_generator.py`
+- `apps/backend/videos/generators/services/fal_client.py`
+
+### 변경 내용
+
+#### 1. Status 설정 중앙화 (`status_config.py`)
+status 관련 맵핑을 한 곳에서 관리:
+```python
+from .status_config import (
+    NODE_ORDER,           # 노드 실행 순서
+    NODE_TO_STATUS,       # 노드 → (status, display_text) 맵핑
+    STATUS_ORDER,         # status → 순서 번호
+    PROGRESS_PERCENTAGES, # status → 진행률 %
+    STATUS_COLORS,        # status → Tailwind CSS 클래스
+    IN_PROGRESS_STATUSES, # 진행중 상태 목록
+    PROGRESS_STEPS,       # 상세 페이지용 단계 정의
+    get_status_color,     # 헬퍼 함수
+    get_progress_percent,
+    get_status_order,
+    get_resume_node,
+    is_in_progress,
+)
+```
+
+#### 2. 상수 중앙화 (`constants.py`)
+매직 넘버 제거:
+```python
+DEFAULT_SEGMENT_DURATION = 8  # seconds
+LAST_CTA_DURATION = 2
+MAX_MODERATION_RETRIES = 2
+FAL_VIDEO_DOWNLOAD_TIMEOUT = 300
+FAL_IMAGE_DOWNLOAD_TIMEOUT = 60
+MODERATION_KEYWORDS = [...]  # moderation error 감지 키워드
+```
+
+#### 3. services.py 중복 제거
+`generate_video_sync()`와 `generate_video_with_resume()`의 80% 중복 코드 통합:
+```python
+def _generate_video(job, start_from: str | None = None):
+    """Core video generation logic."""
+    ...
+
+def generate_video_sync(job):
+    _generate_video(job, start_from=None)
+
+def generate_video_with_resume(job):
+    entry_point = get_resume_entry_point(job)
+    if entry_point == "plan_script":
+        return generate_video_sync(job)
+    _generate_video(job, start_from=entry_point)
+```
+
+에러 처리 헬퍼 함수 추출:
+- `_handle_node_error(job, error_message)`
+- `_handle_exception(job, exception)`
+- `_mark_completed(job)`
+
+#### 4. video_generator.py retry 로직 통합
+`_generate_scene1_with_retry()`와 `_generate_scene2_with_retry()` 통합:
+```python
+def _generate_with_moderation_retry(
+    generate_fn: Callable,
+    scene_name: str,
+    prompt: str,
+    **kwargs,
+) -> bytes | None:
+    """Scene 1/2 공통 retry 로직"""
+```
+
+#### 5. fal_client.py moderation 감지 추출
+중복된 moderation error 감지 로직 통합:
+```python
+def _check_moderation_error(exception: Exception) -> None:
+    """moderation 에러면 ModerationError로 변환"""
+    error_msg = str(exception).lower()
+    if any(keyword in error_msg for keyword in MODERATION_KEYWORDS):
+        raise ModerationError(str(exception))
+    raise exception
+```
+
+#### 6. admin.py 긴 함수 분리
+`_render_progress_steps()` (157줄) 분리:
+- `_render_error_box()` - 에러 메시지 박스 HTML
+- `_render_progress_bar()` - 진행 바 HTML
+- `_get_step_style()` - 단계별 스타일 결정
+- `_render_step_card()` - 단일 단계 카드 HTML
+- `_render_failed_progress_steps()` - 실패 상태 렌더링
+- `_render_normal_progress_steps()` - 정상 상태 렌더링
+
+### Architecture 업데이트
+
+```
+videos/
+├── status_config.py      # [신규] Status 설정 중앙화
+├── constants.py          # [신규] 상수 중앙화
+├── services.py           # 중복 제거, 헬퍼 함수 추출
+├── admin.py              # status 맵핑 import, 함수 분리
+└── generators/
+    ├── nodes/
+    │   └── video_generator.py  # retry 로직 통합
+    └── services/
+        └── fal_client.py       # moderation 감지 추출
+```
+
+---
+
+## 2026-02-03: 비동기 영상 생성 및 재시도 횟수 증가
+
+### 변경 파일
+- `apps/backend/videos/services.py`
+- `apps/backend/videos/admin.py`
+- `apps/backend/videos/constants.py`
+- `apps/backend/videos/generators/nodes/video_generator.py`
+
+### 변경 내용
+
+#### 1. 비동기 영상 생성 (`generate_video_async`)
+영상 생성 실행 시 즉시 응답하고 백그라운드에서 처리:
+```python
+def generate_video_async(job_id: int, resume: bool = False):
+    """Run video generation in a background thread."""
+    import threading
+    from django import db
+
+    def _run_in_thread():
+        db.connections.close_all()
+        # ... 영상 생성 로직 ...
+        db.connections.close_all()
+
+    thread = threading.Thread(target=_run_in_thread, daemon=True)
+    thread.start()
+```
+
+**효과**:
+- 영상 생성 버튼 클릭 시 즉시 페이지 응답
+- HTMX polling (3초 간격)으로 상태 변화 실시간 확인
+- 새로고침 없이 진행 바, 상태 배지, 현재 단계가 자동 업데이트
+
+#### 2. Moderation 재시도 횟수 5회로 증가
+```python
+# constants.py
+MAX_MODERATION_RETRIES = 5  # 기존 2 → 5
+```
+
+**재시도 전략 (progressive sanitization)**:
+- attempt 0: 원본 프롬프트
+- attempt 1: quick_sanitize_names (regex 기반)
+- attempt 2: sanitize_prompt_for_veo (Gemini 기반, 원본에서)
+- attempt 3+: sanitize_prompt_for_veo (이전 결과에서 재적용)
+
+#### 3. Admin 액션 비동기화
+- `generate_video_action`: 즉시 응답 + 백그라운드 실행
+- `resume_video_action`: 즉시 응답 + 백그라운드 실행
+- `bulk_generate_video_action`: 여러 작업 동시 시작

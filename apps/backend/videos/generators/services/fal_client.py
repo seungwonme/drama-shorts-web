@@ -3,6 +3,10 @@
 import fal_client
 import requests
 
+from ...constants import (
+    FAL_VIDEO_DOWNLOAD_TIMEOUT,
+    MODERATION_KEYWORDS,
+)
 from ..config import (
     ASPECT_RATIO,
     FAL_VIDEO_INTERPOLATION_MODEL,
@@ -11,6 +15,22 @@ from ..config import (
 )
 from ..exceptions import ModerationError
 from ..utils.logging import log, log_separator
+
+
+def _check_moderation_error(exception: Exception) -> None:
+    """Check if exception is a moderation error and re-raise appropriately.
+
+    Args:
+        exception: The caught exception to analyze
+
+    Raises:
+        ModerationError: If the exception indicates content moderation rejection
+        Exception: Re-raises the original exception if not a moderation error
+    """
+    error_msg = str(exception).lower()
+    if any(keyword in error_msg for keyword in MODERATION_KEYWORDS):
+        raise ModerationError(str(exception))
+    raise exception
 
 
 def generate_video_from_image(
@@ -64,7 +84,7 @@ def generate_video_from_image(
             raise ValueError(f"No video URL in response: {result}")
 
         log(f"Downloading video from: {video_url[:80]}...")
-        response = requests.get(video_url, timeout=300)
+        response = requests.get(video_url, timeout=FAL_VIDEO_DOWNLOAD_TIMEOUT)
         response.raise_for_status()
         video_bytes = response.content
 
@@ -72,22 +92,8 @@ def generate_video_from_image(
         return video_bytes
 
     except Exception as e:
-        error_msg = str(e).lower()
         log(f"API request failed: {e}", "ERROR")
-
-        # Detect content moderation errors
-        moderation_keywords = [
-            "moderation",
-            "blocked",
-            "safety",
-            "sensitive",
-            "content filter",
-            "nsfw",
-            "policy",
-        ]
-        if any(keyword in error_msg for keyword in moderation_keywords):
-            raise ModerationError(str(e))
-        raise
+        _check_moderation_error(e)
 
 
 def generate_video_interpolation(
@@ -147,7 +153,7 @@ def generate_video_interpolation(
             raise ValueError(f"No video URL in response: {result}")
 
         log(f"Downloading video from: {video_url[:80]}...")
-        response = requests.get(video_url, timeout=300)
+        response = requests.get(video_url, timeout=FAL_VIDEO_DOWNLOAD_TIMEOUT)
         response.raise_for_status()
         video_bytes = response.content
 
@@ -155,19 +161,5 @@ def generate_video_interpolation(
         return video_bytes
 
     except Exception as e:
-        error_msg = str(e).lower()
         log(f"API request failed: {e}", "ERROR")
-
-        # Detect content moderation errors
-        moderation_keywords = [
-            "moderation",
-            "blocked",
-            "safety",
-            "sensitive",
-            "content filter",
-            "nsfw",
-            "policy",
-        ]
-        if any(keyword in error_msg for keyword in moderation_keywords):
-            raise ModerationError(str(e))
-        raise
+        _check_moderation_error(e)

@@ -2,18 +2,17 @@
 
 import tempfile
 from pathlib import Path
+from typing import Callable
 
 from moviepy import VideoFileClip
 from PIL import Image as PILImage
 
+from ...constants import MAX_MODERATION_RETRIES
 from ..exceptions import ModerationError
 from ..services.fal_client import generate_video_from_image, generate_video_interpolation
 from ..services.prompt_sanitizer import quick_sanitize_names, sanitize_prompt_for_veo
 from ..state import VideoGeneratorState
 from ..utils.logging import log, log_separator
-
-# Maximum retry attempts for moderation errors
-MAX_MODERATION_RETRIES = 2
 
 
 def extract_last_frame_from_bytes(video_bytes: bytes) -> bytes:
@@ -53,17 +52,22 @@ def extract_last_frame_from_bytes(video_bytes: bytes) -> bytes:
         tmp_path.unlink(missing_ok=True)
 
 
-def _generate_scene1_with_retry(
+def _generate_with_moderation_retry(
+    generate_fn: Callable[..., bytes],
+    scene_name: str,
     prompt: str,
-    first_frame_url: str,
-    duration: int,
+    **kwargs,
 ) -> bytes | None:
-    """Generate Scene 1 video with retry logic for moderation errors.
+    """Generate video with retry logic for moderation errors.
+
+    Common retry wrapper for Scene 1 and Scene 2 generation.
+    Applies progressive prompt sanitization on moderation failures.
 
     Args:
+        generate_fn: The video generation function to call
+        scene_name: Name of the scene for logging (e.g., "Scene 1", "Scene 2")
         prompt: Video generation prompt
-        first_frame_url: URL of the starting frame image
-        duration: Video duration in seconds
+        **kwargs: Additional arguments passed to generate_fn
 
     Returns:
         Video bytes or None if all retries failed
@@ -71,96 +75,41 @@ def _generate_scene1_with_retry(
     current_prompt = prompt
     for attempt in range(MAX_MODERATION_RETRIES + 1):
         try:
-            video_bytes = generate_video_from_image(
-                prompt=current_prompt,
-                first_frame_url=first_frame_url,
-                duration=duration,
-            )
-            log(f"Scene 1 generated: {len(video_bytes)} bytes")
+            video_bytes = generate_fn(prompt=current_prompt, **kwargs)
+            log(f"{scene_name} generated: {len(video_bytes)} bytes")
             return video_bytes
 
         except ModerationError as e:
             if attempt < MAX_MODERATION_RETRIES:
                 log(
-                    f"Scene 1 MODERATION error (attempt {attempt + 1}/{MAX_MODERATION_RETRIES + 1}): {e}",
+                    f"{scene_name} MODERATION error (attempt {attempt + 1}/{MAX_MODERATION_RETRIES + 1}): {e}",
                     "WARNING",
                 )
-                # Try different sanitization strategies
+                # Progressive sanitization strategies
                 if attempt == 0:
+                    # First try: quick regex-based sanitization
                     log("Attempting quick sanitization (regex-based)...")
                     current_prompt = quick_sanitize_names(current_prompt)
-                else:
+                elif attempt == 1:
+                    # Second try: Gemini-based full sanitization
                     log("Attempting full sanitization (Gemini-based)...")
+                    current_prompt = sanitize_prompt_for_veo(prompt)  # From original
+                else:
+                    # Third+ try: Apply both sanitizations progressively
+                    log(f"Attempting combined sanitization (attempt {attempt + 1})...")
+                    # Re-sanitize the already sanitized prompt
                     current_prompt = sanitize_prompt_for_veo(current_prompt)
                 log("Retrying with sanitized prompt...")
                 continue
             else:
                 log(
-                    f"Scene 1 MODERATION error after {MAX_MODERATION_RETRIES + 1} attempts: {e}",
+                    f"{scene_name} MODERATION error after {MAX_MODERATION_RETRIES + 1} attempts: {e}",
                     "WARNING",
                 )
                 return None
 
         except Exception as e:
-            log(f"Scene 1 generation failed: {e}", "ERROR")
-            return None
-
-    return None
-
-
-def _generate_scene2_with_retry(
-    prompt: str,
-    first_frame_url: str,
-    last_frame_url: str,
-    duration: int,
-) -> bytes | None:
-    """Generate Scene 2 video (interpolation) with retry logic for moderation errors.
-
-    Args:
-        prompt: Video generation prompt
-        first_frame_url: URL of the first frame (scene1 last frame)
-        last_frame_url: URL of the last frame (CTA frame)
-        duration: Video duration in seconds
-
-    Returns:
-        Video bytes or None if all retries failed
-    """
-    current_prompt = prompt
-    for attempt in range(MAX_MODERATION_RETRIES + 1):
-        try:
-            video_bytes = generate_video_interpolation(
-                prompt=current_prompt,
-                first_frame_url=first_frame_url,
-                last_frame_url=last_frame_url,
-                duration=duration,
-            )
-            log(f"Scene 2 generated: {len(video_bytes)} bytes")
-            return video_bytes
-
-        except ModerationError as e:
-            if attempt < MAX_MODERATION_RETRIES:
-                log(
-                    f"Scene 2 MODERATION error (attempt {attempt + 1}/{MAX_MODERATION_RETRIES + 1}): {e}",
-                    "WARNING",
-                )
-                # Try different sanitization strategies
-                if attempt == 0:
-                    log("Attempting quick sanitization (regex-based)...")
-                    current_prompt = quick_sanitize_names(current_prompt)
-                else:
-                    log("Attempting full sanitization (Gemini-based)...")
-                    current_prompt = sanitize_prompt_for_veo(current_prompt)
-                log("Retrying with sanitized prompt...")
-                continue
-            else:
-                log(
-                    f"Scene 2 MODERATION error after {MAX_MODERATION_RETRIES + 1} attempts: {e}",
-                    "WARNING",
-                )
-                return None
-
-        except Exception as e:
-            log(f"Scene 2 generation failed: {e}", "ERROR")
+            log(f"{scene_name} generation failed: {e}", "ERROR")
             return None
 
     return None
@@ -203,7 +152,9 @@ def generate_scene1(state: VideoGeneratorState) -> dict:
         }
 
     # Generate video using URL directly (fal.ai accepts URLs)
-    video_bytes = _generate_scene1_with_retry(
+    video_bytes = _generate_with_moderation_retry(
+        generate_fn=generate_video_from_image,
+        scene_name="Scene 1",
         prompt=seg["prompt"],
         first_frame_url=first_frame_url,
         duration=seg["seconds"],
@@ -271,7 +222,9 @@ def generate_scene2(state: VideoGeneratorState) -> dict:
         }
 
     # Generate video with interpolation using URLs directly (fal.ai accepts URLs)
-    video_bytes = _generate_scene2_with_retry(
+    video_bytes = _generate_with_moderation_retry(
+        generate_fn=generate_video_interpolation,
+        scene_name="Scene 2",
         prompt=seg["prompt"],
         first_frame_url=scene1_last_frame_url,
         last_frame_url=cta_last_frame_url,
