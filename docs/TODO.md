@@ -5,7 +5,7 @@
 - [x] 실행마다 영상 덮어쓰기 X -> 폴더를 만들어서 영상 저장
 - [x] 인물 일관성 유지
 - [x] 프롬프트 구조 확립
-- [x] 라스트 씬 이미지 정해져 있고 효과음과 함께 
+- [x] 라스트 씬 이미지 정해져 있고 효과음과 함께
 - [x] Django Admin
 - [x] 제품 이미지 업로드 기능
 - [x] 제품 링크 안들어가는 문제 해결
@@ -66,3 +66,23 @@
 - https://docs.google.com/spreadsheets/d/1W4EJudAGRk7_zkemVIOUtSz1BhwS9jRhD7HBma5_ZeA/edit?gid=431509896#gid=431509896
 - https://docs.google.com/spreadsheets/d/1W4EJudAGRk7_zkemVIOUtSz1BhwS9jRhD7HBma5_ZeA/edit?gid=1355792315#gid=1355792315
 - https://www.youtube.com/watch?v=k3GnHTPEgJI
+
+
+치크 병아리 버전, 플레이어 버전
+- 삐약삐약을 제외한 모든 것들은 효과음이 들어가야 한다.
+- 프레임을 여러개 -> 영상 20초 이내
+영상 스타일 커스터마이징 기능
+스크립트 예시
+
+매주 목요일 컨설팅 -> 3개 영상 필요
+
+bfb96854-9b3b-4b7c-8fc8-74b20ce76ea4:a389576eae2d09aa43071fc21495e5d6
+
+인풋
+- 배경
+- 인물(캐릭터)
+
+요구사항
+- 스크립트와 일치하는 영상 생성
+- 중간에 텍스트를 최대한 제거
+- 영상을 분할해서
