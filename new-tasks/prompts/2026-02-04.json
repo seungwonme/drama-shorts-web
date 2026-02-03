@@ -1,0 +1,47 @@
+[
+  {
+    "time": "04:08:09",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01.json'\n\n이 프롬프트를 템플릿으로 만들거야\n템플릿을 json 파일로 만들어줘 "
+  },
+  {
+    "time": "04:09:28",
+    "user": "seungwonan",
+    "prompt": "timeline이 2개네?"
+  },
+  {
+    "time": "04:10:28",
+    "user": "seungwonan",
+    "prompt": "  \"timeline\": [\n        {\n          \"sequence\": 1,\n          \"timestamp\": \"[시작-종료]\",\n          \"camera\": \"[앵글]\",\n          \"movement\": \"[움직임]\",\n          \"focus\": \"[초점]\",\n          \"mood\": \"[분위기]\",\n          \"sfx\": \"[효과음]\",\n          \"A\": {\n            \"action\": \"[행동]\",\n            \"dialogue\": \"[대사]\",\n            \"emotion\": \"[감정]\",\n            \"position\": \"[위치]\"\n          },\n          \"B\": {\n            \"action\": \"[행동]\",\n            \"dialogue\": \"[대사]\",\n            \"emotion\": \"[감정]\",\n            \"position\": \"[위치]\"\n          }\n        }\n      ]\n\n이거 말한거야"
+  },
+  {
+    "time": "04:14:41",
+    "user": "seungwonan",
+    "prompt": "여기서 영상 만들 때 필요한 것만 남기려고 해\n제거 후보군 알려줘"
+  },
+  {
+    "time": "04:16:25",
+    "user": "seungwonan",
+    "prompt": "Veo에서 voice와 효과음 생성함 -> 필수"
+  },
+  {
+    "time": "04:17:37",
+    "user": "seungwonan",
+    "prompt": "_meta, product, scene_name만 제거"
+  },
+  {
+    "time": "04:18:57",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01.json' 이거를 템플릿에 맞게 수정해주고\n'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/정리.md' 1편과 맞는지도 다시 한번 체크"
+  },
+  {
+    "time": "04:20:40",
+    "user": "seungwonan",
+    "prompt": "_meta만 제거"
+  },
+  {
+    "time": "04:25:21",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01.json'\n\n현재 문제가 veo는 2초 단위로 총 2-8초 까지 생성 가능한데 지금 프롬프트 형식이 20초 내용을 전부 담고 있다는 점이야\n이렇게 프롬프트가 나오면 \n각 씬(최대 8초 단위) 1, 2, 3 ...으로 분리하는 스크립트 만들어줘\n\n동작 원리\n1. ep01.json 인자로 입력 받기\n2. product, characters는 기본적으로 입력 -> scenes를 scene으로 변경하고 해당 씬만 {}로 묶어서 json 파일로 생성\n3. 2에서 나온 N개의 파일 인자로 입력 받은 파일 이름에 맞춰서 폴더 생성하고 N개 1, 2, 3 ... 으로 순서대로 정리\n\n이해했어?"
+  }
+]

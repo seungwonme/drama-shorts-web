@@ -1,0 +1,72 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": "Young Asian male, average build, expressive face. Short black hair, wearing a gaming headset on head.",
+      "clothing": "Black long-sleeve shirt, dark blue jeans. Casual gamer look.",
+      "voice": "Energetic and emotional, easily panicked but determined."
+    },
+    {
+      "id": "B",
+      "name": "GPT",
+      "gender": "male",
+      "age": "unknown",
+      "appearance": "PUBG character with level 3 military helmet completely covering face. Tactical and robotic posture.",
+      "clothing": "White dress shirt, dark jeans, tactical belt with holstered pistol.",
+      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다."
+    }
+  ],
+  "scene": {
+    "scene_number": 2,
+    "scene_name": "게임 입장",
+    "duration": 3,
+    "scene_setting": {
+      "location": "Post-apocalyptic urban street. Abandoned concrete buildings, broken windows, debris on streets, overcast sky.",
+      "lighting": "Overcast daylight, grey sky, diffused shadows."
+    },
+    "camera_setup": {
+      "lens": "35mm",
+      "depth_of_field": "deep focus",
+      "texture": "gritty urban decay, realistic character detail"
+    },
+    "mood_style": {
+      "genre": "Chaotic comedy in survival game world",
+      "color_tone": "Desaturated grey-blue urban tones"
+    },
+    "audio": {
+      "background": "Distant gunfire, wind through debris",
+      "fx": "footsteps on concrete, distant explosions"
+    },
+    "timeline": [
+      {
+        "sequence": 1,
+        "timestamp": "00:05-00:08",
+        "camera": "[Wide to Medium shot]",
+        "movement": "static",
+        "focus": "both characters in frame",
+        "mood": "Chaotic, comedic",
+        "sfx": "distant gunshots",
+        "A": {
+          "action": "Standing in middle of street, spinning around frantically, looking at surroundings in disbelief.",
+          "dialogue": "으아 아니 진짜 게임속으로 들어가면 어떻게 하냐고!",
+          "emotion": "Panicked, confused",
+          "position": "center-right of frame"
+        },
+        "B": {
+          "action": "Standing calmly to the left of A, gestures with one hand while explaining.",
+          "dialogue": "치킨을 먹으면 탈출가능합니다.",
+          "emotion": "Calm, robotic",
+          "position": "center-left of frame"
+        }
+      }
+    ]
+  }
+}

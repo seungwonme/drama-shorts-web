@@ -4,10 +4,13 @@ These functions allow re-running individual steps of the video generation pipeli
 for completed VideoGenerationJob instances.
 """
 
+import logging
 import tempfile
 from pathlib import Path
 
 from django.core.files.base import ContentFile
+
+logger = logging.getLogger(__name__)
 
 from .generators.nodes.video_generator import extract_last_frame_from_bytes
 from .generators.services.fal_client import (

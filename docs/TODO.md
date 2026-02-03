@@ -67,22 +67,114 @@
 - https://docs.google.com/spreadsheets/d/1W4EJudAGRk7_zkemVIOUtSz1BhwS9jRhD7HBma5_ZeA/edit?gid=1355792315#gid=1355792315
 - https://www.youtube.com/watch?v=k3GnHTPEgJI
 
+---
 
-치크 병아리 버전, 플레이어 버전
+매주 수요일 컨설팅 -> 3개 영상 필요
+
+bfb96854-9b3b-4b7c-8fc8-74b20ce76ea4:a389576eae2d09aa43071fc21495e5d6
+
+## 인풋
+- 배경
+- 인물(캐릭터)
+
+## 요구사항
+- 스크립트와 일치하는 영상 생성
+- 중간에 텍스트를 최대한 제거
+- 영상을 분할해서
+
+## 치크 병아리 버전, 플레이어 버전
 - 삐약삐약을 제외한 모든 것들은 효과음이 들어가야 한다.
 - 프레임을 여러개 -> 영상 20초 이내
 영상 스타일 커스터마이징 기능
 스크립트 예시
 
-매주 목요일 컨설팅 -> 3개 영상 필요
 
-bfb96854-9b3b-4b7c-8fc8-74b20ce76ea4:a389576eae2d09aa43071fc21495e5d6
+---
 
-인풋
-- 배경
-- 인물(캐릭터)
+## 게임 캐릭터 숏폼 (bbiyack) 통합 작업
 
-요구사항
-- 스크립트와 일치하는 영상 생성
-- 중간에 텍스트를 최대한 제거
-- 영상을 분할해서
+### 완료된 작업 (Phase 1-5)
+
+#### Phase 1: 모델 확장 ✅
+- `VideoGenerationJob`에 `job_type` (DRAMA/GAME) 추가
+- 게임 전용 필드 추가: `character_image`, `game_name`, `user_prompt`, `character_description`, `game_locations_used`
+- `GameFrame` 모델 생성 (5씬 각각의 프레임/영상 저장)
+- Migration 적용: `0007_add_game_character_support`
+
+#### Phase 2: Status 설정 확장 ✅
+- `status_config.py`: `GAME_NODE_ORDER`, `GAME_STATUS_ORDER`, `GAME_PROGRESS_STEPS` 등 추가
+- `constants.py`: `GAME_SEGMENT_COUNT=5`, `GAME_SEGMENT_DURATION=4`, `GAME_FADE_DURATION=0.5` 등 추가
+
+#### Phase 3: Generators 패키지 확장 ✅
+- `generators/game_state.py`: `GameScriptData`, `GameGeneratorState` TypedDict
+- `generators/game_prompts.py`: 게임 스크립트 시스템 프롬프트, 프레임 생성 프롬프트 템플릿
+- `generators/nodes/game_planner.py`: Gemini (langchain_google_genai)로 5씬 스크립트 생성
+- `generators/nodes/game_assets.py`: Nano Banana로 5개 프레임 병렬 생성
+- `generators/nodes/game_video_generator.py`: Veo로 5개 영상 병렬 생성
+- `generators/nodes/game_concatenator.py`: FFmpeg xfade로 페이드 트랜지션 병합
+- `generators/utils/media.py`: `download_image_as_base64()`, `resize_image_for_api()` 추가
+
+#### Phase 4: Services 확장 ✅
+- `game_services.py`: 게임 영상 생성 워크플로우 전체 구현
+  - `generate_game_video_sync()`, `generate_game_video_async()`
+  - `_save_and_inject_game_urls()`: S3 저장 및 URL 주입
+- `services.py`: `generate_video_async()`에서 `job_type`에 따라 분기
+
+#### Phase 5: Admin 확장 ✅
+- `GameFrameInline`: 5개 씬 인라인 표시
+- `GameFrameAdmin`: 개별 프레임 관리
+- `VideoGenerationJobAdmin` 조건부 UI:
+  - `get_fieldsets()`: job_type에 따라 다른 필드 표시
+  - `get_inlines()`: 게임 타입일 때만 GameFrameInline 표시
+  - `job_type_badge()`, `topic_or_game()`, `character_image_preview()` 커스텀 컬럼
+  - `_render_game_progress_steps()`: 5단계 진행 표시 (대기→기획→프레임→영상→병합→완료)
+
+### 남은 작업
+
+#### Phase 6: 테스트 ⏳
+- [ ] `videos/tests/test_game_services.py` 작성
+  - `test_build_game_initial_state()`: 초기 state 빌드 테스트
+  - `test_game_node_order()`: 노드 순서 테스트
+  - `test_save_and_inject_game_urls()`: S3 저장/URL 주입 테스트
+- [ ] Django runserver 실행하여 Admin UI 확인
+- [ ] 실제 게임 영상 생성 테스트 (캐릭터 이미지 + 게임명 + 프롬프트)
+
+#### 검증 필요 사항
+- [ ] langchain_google_genai 패키지 정상 동작 확인 (google.generativeai → langchain 마이그레이션)
+- [ ] 병렬 처리 (ThreadPoolExecutor 5 workers) 성능 확인
+- [ ] FFmpeg xfade 트랜지션 품질 확인
+
+### 테스트 명령어
+
+```bash
+# Django 검증
+cd apps/backend
+uv run python manage.py check
+
+# 테스트 실행
+uv run pytest videos/tests/test_game_services.py -v
+
+# Admin UI 확인
+uv run python manage.py runserver
+# http://localhost:8000/admin/ 접속 → 영상 생성 작업 → job_type=GAME으로 생성
+```
+
+### 주요 파일 목록
+
+| 파일                                            | 상태 | 설명                               |
+| ----------------------------------------------- | ---- | ---------------------------------- |
+| `videos/models.py`                              | 수정 | JobType, 게임 필드, GameFrame 모델 |
+| `videos/status_config.py`                       | 수정 | GAME_* 상수                        |
+| `videos/constants.py`                           | 수정 | GAME_SEGMENT_* 상수                |
+| `videos/services.py`                            | 수정 | job_type 분기                      |
+| `videos/game_services.py`                       | 신규 | 게임 워크플로우                    |
+| `videos/admin.py`                               | 수정 | 조건부 UI, GameFrameAdmin          |
+| `generators/game_state.py`                      | 신규 | State TypedDict                    |
+| `generators/game_prompts.py`                    | 신규 | 프롬프트 템플릿                    |
+| `generators/nodes/game_planner.py`              | 신규 | Gemini 스크립트                    |
+| `generators/nodes/game_assets.py`               | 신규 | 프레임 생성                        |
+| `generators/nodes/game_video_generator.py`      | 신규 | 영상 생성                          |
+| `generators/nodes/game_concatenator.py`         | 신규 | 영상 병합                          |
+| `generators/utils/media.py`                     | 수정 | base64 다운로드                    |
+| `generators/nodes/__init__.py`                  | 수정 | export 추가                        |
+| `migrations/0007_add_game_character_support.py` | 신규 | DB 마이그레이션                    |

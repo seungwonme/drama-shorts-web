@@ -1,0 +1,152 @@
+{
+  "product": {
+    "name": "[제품/서비스명]",
+    "description": "[영문 설명 - AI 영상 생성용]",
+    "key_benefit": "[핵심 가치/혜택]"
+  },
+
+  "characters": [
+    {
+      "id": "A",
+      "name": "[캐릭터 한글명]",
+      "gender": "[male/female]",
+      "age": "[early 20s, late 30s 등]",
+      "appearance": "[영문] 외형 묘사 - 얼굴, 체형, 헤어스타일 등",
+      "clothing": "[영문] 의상 묘사 - 상의, 하의, 액세서리 등",
+      "voice": "[영문] 목소리/말투 특징"
+    },
+    {
+      "id": "B",
+      "name": "[캐릭터 한글명]",
+      "gender": "[male/female]",
+      "age": "[연령대]",
+      "appearance": "[영문] 외형 묘사",
+      "clothing": "[영문] 의상 묘사",
+      "voice": "[영문] 목소리/말투 특징"
+    }
+  ],
+
+  "scenes": [
+    {
+      "scene_number": 1,
+      "scene_name": "[씬 한글명 - 훅, 전개, 위기 등]",
+      "duration": 5,
+
+      "scene_setting": {
+        "location": "[영문] 장소 상세 묘사 - 배경, 사물, 분위기 등",
+        "lighting": "[영문] 조명 묘사 - 광원, 방향, 색온도 등"
+      },
+
+      "camera_setup": {
+        "lens": "[초점거리 - 35mm, 50mm, 85mm 등]",
+        "depth_of_field": "[피사계 심도 - shallow/deep, bokeh 여부]",
+        "texture": "[영문] 텍스처 묘사 - 피부, 재질, 디테일 등"
+      },
+
+      "mood_style": {
+        "genre": "[영문] 장르/분위기 - comedy, thriller, dramatic 등",
+        "color_tone": "[영문] 색감 - warm, cold, desaturated, high contrast 등"
+      },
+
+      "audio": {
+        "background": "[영문] 배경음/음악 설명 (후편집 참고용)",
+        "fx": "[영문] 효과음 설명 (후편집 참고용)"
+      },
+
+      "timeline": [
+        {
+          "sequence": 1,
+          "timestamp": "00:00-00:02",
+          "camera": "[카메라 앵글 - CU, MS, Wide 등]",
+          "movement": "[카메라 움직임 - static, tracking, pan, zoom 등]",
+          "focus": "[영문] 초점 대상",
+          "mood": "[영문] 시퀀스 분위기",
+          "sfx": "[영문] 해당 시퀀스 효과음",
+          "A": {
+            "action": "[영문] 캐릭터 A의 행동 묘사",
+            "dialogue": "[한글] 대사 (후편집 자막용, 영상에는 미포함)",
+            "emotion": "[영문] 감정 상태 - 단일 감정만",
+            "position": "[영문] 프레임 내 위치 - left, center, right 등"
+          },
+          "B": {
+            "action": "[영문] 캐릭터 B의 행동 묘사 (없으면 빈 문자열)",
+            "dialogue": "[한글] 대사",
+            "emotion": "[영문] 감정 상태",
+            "position": "[영문] 프레임 내 위치 또는 'not in scene'"
+          }
+        },
+        {
+          "sequence": 2,
+          "timestamp": "00:02-00:05",
+          "camera": "[카메라 앵글]",
+          "movement": "[카메라 움직임]",
+          "focus": "[초점 대상]",
+          "mood": "[시퀀스 분위기]",
+          "sfx": "[효과음]",
+          "A": {
+            "action": "[행동 묘사]",
+            "dialogue": "[대사]",
+            "emotion": "[감정]",
+            "position": "[위치]"
+          },
+          "B": {
+            "action": "[행동 묘사]",
+            "dialogue": "[대사]",
+            "emotion": "[감정]",
+            "position": "[위치]"
+          }
+        }
+      ]
+    },
+    {
+      "scene_number": 2,
+      "scene_name": "[씬 한글명]",
+      "duration": 3,
+
+      "scene_setting": {
+        "location": "[장소 묘사]",
+        "lighting": "[조명 묘사]"
+      },
+
+      "camera_setup": {
+        "lens": "[초점거리]",
+        "depth_of_field": "[피사계 심도]",
+        "texture": "[텍스처]"
+      },
+
+      "mood_style": {
+        "genre": "[장르]",
+        "color_tone": "[색감]"
+      },
+
+      "audio": {
+        "background": "[배경음]",
+        "fx": "[효과음]"
+      },
+
+      "timeline": [
+        {
+          "sequence": 1,
+          "timestamp": "[시작-종료]",
+          "camera": "[앵글]",
+          "movement": "[움직임]",
+          "focus": "[초점]",
+          "mood": "[분위기]",
+          "sfx": "[효과음]",
+          "A": {
+            "action": "[행동]",
+            "dialogue": "[대사]",
+            "emotion": "[감정]",
+            "position": "[위치]"
+          },
+          "B": {
+            "action": "[행동]",
+            "dialogue": "[대사]",
+            "emotion": "[감정]",
+            "position": "[위치]"
+          }
+        }
+      ]
+    }
+  ]
+}

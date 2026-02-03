@@ -7,7 +7,7 @@ from typing import Callable
 from moviepy import VideoFileClip
 from PIL import Image as PILImage
 
-from ...constants import MAX_MODERATION_RETRIES
+from ...constants import FRAME_EXTRACTION_EPSILON, MAX_MODERATION_RETRIES
 from ..exceptions import ModerationError
 from ..services.fal_client import generate_video_from_image, generate_video_interpolation
 from ..services.prompt_sanitizer import quick_sanitize_names, sanitize_prompt_for_veo
@@ -33,7 +33,7 @@ def extract_last_frame_from_bytes(video_bytes: bytes) -> bytes:
     try:
         with VideoFileClip(str(tmp_path)) as clip:
             # Get the last frame (at duration - small epsilon to avoid edge issues)
-            last_time = max(0, clip.duration - 0.01)
+            last_time = max(0, clip.duration - FRAME_EXTRACTION_EPSILON)
             frame = clip.get_frame(last_time)
 
             # Convert numpy array to PIL Image and save to bytes

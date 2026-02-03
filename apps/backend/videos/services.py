@@ -1,8 +1,12 @@
 """Services for video generation using integrated generators package."""
 
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
 from django.core.files.base import ContentFile
 
-from .generators.prompts import VideoStyle
 from .generators.nodes import (
     concatenate_videos,
     generate_scene1,
@@ -11,8 +15,14 @@ from .generators.nodes import (
     prepare_cta_frame,
     prepare_first_frame,
 )
+from .generators.prompts import VideoStyle
 from .generators.state import SegmentVideo, VideoGeneratorState
 from .status_config import NODE_ORDER, NODE_TO_STATUS, get_resume_node
+
+if TYPE_CHECKING:
+    from .models import VideoGenerationJob
+
+logger = logging.getLogger(__name__)
 
 # Map node names to functions
 NODE_FUNCTIONS = {
@@ -25,7 +35,7 @@ NODE_FUNCTIONS = {
 }
 
 
-def _generate_video(job, start_from: str | None = None):
+def _generate_video(job: VideoGenerationJob, start_from: str | None = None) -> None:
     """Core video generation logic.
 
     Executes nodes sequentially, saving results after each step.
@@ -68,7 +78,7 @@ def _generate_video(job, start_from: str | None = None):
         raise
 
 
-def _handle_node_error(job, error_message: str):
+def _handle_node_error(job: VideoGenerationJob, error_message: str) -> None:
     """Handle error returned from a node."""
     from .models import VideoGenerationJob
 
@@ -78,13 +88,11 @@ def _handle_node_error(job, error_message: str):
     job.save()
 
 
-def _handle_exception(job, exception: Exception):
+def _handle_exception(job: VideoGenerationJob, exception: Exception) -> None:
     """Handle unexpected exception during generation."""
-    import traceback
-
     from .models import VideoGenerationJob
 
-    traceback.print_exc()
+    logger.exception("Video generation failed for job %d: %s", job.id, exception)
 
     if not job.failed_at_status:
         job.failed_at_status = job.status
@@ -93,7 +101,7 @@ def _handle_exception(job, exception: Exception):
     job.save()
 
 
-def _mark_completed(job):
+def _mark_completed(job: VideoGenerationJob) -> None:
     """Mark job as successfully completed."""
     from .models import VideoGenerationJob
 
@@ -103,7 +111,7 @@ def _mark_completed(job):
     job.save()
 
 
-def generate_video_sync(job):
+def generate_video_sync(job: VideoGenerationJob) -> None:
     """동기식 영상 생성 with incremental saving.
 
     generators의 노드들을 순차 실행하고 각 단계 완료 시 즉시 DB에 저장합니다.
@@ -115,7 +123,7 @@ def generate_video_sync(job):
     _generate_video(job, start_from=None)
 
 
-def _build_initial_state(job) -> VideoGeneratorState:
+def _build_initial_state(job: VideoGenerationJob) -> VideoGeneratorState:
     """Build initial state from job."""
     return {
         "topic": job.topic,
@@ -145,14 +153,19 @@ def _build_initial_state(job) -> VideoGeneratorState:
     }
 
 
-def _update_job_status_for_node(job, node_name: str):
+def _update_job_status_for_node(job: VideoGenerationJob, node_name: str) -> None:
     """Update job status based on current node."""
     if node_name in NODE_TO_STATUS:
         job.status, job.current_step = NODE_TO_STATUS[node_name]
         job.save()
 
 
-def _save_and_inject_urls(job, node_name: str, result: dict, state: dict) -> dict:
+def _save_and_inject_urls(
+    job: VideoGenerationJob,
+    node_name: str,
+    result: dict,
+    state: VideoGeneratorState,
+) -> VideoGeneratorState:
     """Save bytes to S3 and inject URLs into state for next node."""
     from .models import VideoSegment
 
@@ -286,36 +299,41 @@ def _save_and_inject_urls(job, node_name: str, result: dict, state: dict) -> dic
     return state
 
 
-def _create_video_segments(job, segments_data: list):
+def _create_video_segments(job: VideoGenerationJob, segments_data: list[dict]) -> None:
     """Create segment records (for storing prompts).
 
-    Uses update_or_create to prevent duplicate key errors.
+    Uses bulk operations with transaction for efficiency.
     """
+    from django.db import transaction
+
     from .models import VideoSegment
 
-    # Delete excess segments
-    job.segments.filter(segment_index__gte=len(segments_data)).delete()
+    with transaction.atomic():
+        # Delete all existing segments for this job
+        job.segments.all().delete()
 
-    for i, seg_data in enumerate(segments_data):
-        VideoSegment.objects.update_or_create(
-            job=job,
-            segment_index=i,
-            defaults={
-                "title": seg_data.get("title", f"Segment {i+1}"),
-                "seconds": seg_data.get("seconds", 8),
-                "prompt": seg_data.get("prompt", ""),
-                "status": VideoSegment.Status.PENDING,
-            },
-        )
+        # Bulk create new segments
+        segments_to_create = [
+            VideoSegment(
+                job=job,
+                segment_index=i,
+                title=seg_data.get("title", f"Segment {i+1}"),
+                seconds=seg_data.get("seconds", 8),
+                prompt=seg_data.get("prompt", ""),
+                status=VideoSegment.Status.PENDING,
+            )
+            for i, seg_data in enumerate(segments_data)
+        ]
+        VideoSegment.objects.bulk_create(segments_to_create)
 
 
-def get_resume_entry_point(job) -> str:
+def get_resume_entry_point(job: VideoGenerationJob) -> str:
     """Return the node to resume from based on failure point."""
     resume_status = job.failed_at_status or job.status
     return get_resume_node(resume_status)
 
 
-def _build_resume_state(job) -> dict:
+def _build_resume_state(job: VideoGenerationJob) -> VideoGeneratorState:
     """Build state from DB for resuming from failure point.
 
     Uses FileField.url directly - no bytes download needed.
@@ -379,7 +397,7 @@ def _build_resume_state(job) -> dict:
     return state
 
 
-def generate_video_with_resume(job):
+def generate_video_with_resume(job: VideoGenerationJob) -> None:
     """Resume video generation from failure point.
 
     Loads existing results from DB and resumes from the failed node.
@@ -397,7 +415,7 @@ def generate_video_with_resume(job):
 build_resume_state = _build_resume_state
 
 
-def generate_video_sync_simple(job):
+def generate_video_sync_simple(job: VideoGenerationJob) -> None:
     """Simple version: invoke all at once (for debugging).
 
     Note: This version doesn't support URL-based state.
@@ -419,10 +437,26 @@ def generate_video_async(job_id: int, resume: bool = False):
     generation continues in the background. HTMX polling will show
     real-time status updates.
 
+    Automatically routes to game or drama workflow based on job_type.
+
     Args:
         job_id: ID of the VideoGenerationJob to process
         resume: If True, resume from failure point instead of starting fresh
     """
+    from .models import VideoGenerationJob
+
+    # Check job type to route to correct workflow
+    try:
+        job = VideoGenerationJob.objects.get(pk=job_id)
+        if job.job_type == VideoGenerationJob.JobType.GAME:
+            from .game_services import generate_game_video_async
+
+            generate_game_video_async(job_id, resume=resume)
+            return
+    except VideoGenerationJob.DoesNotExist:
+        return
+
+    # Drama workflow (default)
     import threading
 
     from django import db
@@ -430,8 +464,6 @@ def generate_video_async(job_id: int, resume: bool = False):
     def _run_in_thread():
         # Close old database connections to avoid threading issues
         db.connections.close_all()
-
-        from .models import VideoGenerationJob
 
         try:
             job = VideoGenerationJob.objects.get(pk=job_id)

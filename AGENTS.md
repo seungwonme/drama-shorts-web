@@ -515,3 +515,215 @@ MAX_MODERATION_RETRIES = 5  # 기존 2 → 5
 - `generate_video_action`: 즉시 응답 + 백그라운드 실행
 - `resume_video_action`: 즉시 응답 + 백그라운드 실행
 - `bulk_generate_video_action`: 여러 작업 동시 시작
+
+---
+
+## 2026-02-03: 코드 품질 개선
+
+### 변경 파일
+- `apps/backend/config/settings.py`
+- `apps/backend/videos/services.py`
+- `apps/backend/videos/admin.py`
+- `apps/backend/videos/constants.py`
+- `apps/backend/videos/generators/utils/logging.py`
+- `apps/backend/videos/generators/nodes/video_generator.py`
+- `apps/backend/videos/tests/` (신규)
+- `apps/backend/pyproject.toml`
+
+### 변경 내용
+
+#### 1. 환경 변수 로딩 안전화
+- 직접 .env 파싱 → `python-dotenv` 라이브러리 사용
+- CSRF origin URL 유효성 검증 추가
+
+#### 2. 로깅 구조화
+- `config/settings.py`에 Django LOGGING 설정 추가
+- `traceback.print_exc()` → `logger.exception()` 교체
+- `generators/utils/logging.py`를 Python 표준 logging과 통합
+
+#### 3. 타입 힌트 완성
+- `services.py`의 모든 함수에 타입 힌트 추가
+- `TYPE_CHECKING`을 사용한 순환 import 방지
+
+#### 4. Admin 액션 중복 제거
+- `_execute_rework_action()` 헬퍼 함수 추가
+- 5개 재작업 액션의 중복 검증/예외 처리 로직 통합
+
+#### 5. HTMX 뷰 중복 제거
+- `_htmx_view()` 헬퍼 함수 추가
+- 5개 HTMX 뷰의 동일한 try-except 패턴 통합
+
+#### 6. 하드코딩된 값 상수화
+- `TOTAL_STEPS` 상수를 `status_config.py`에서 import하여 사용
+- `FRAME_EXTRACTION_EPSILON` 상수 추가
+- Admin UI 관련 상수 추가 (PREVIEW_IMAGE_WIDTH 등)
+
+#### 7. 쿼리 최적화
+- `_create_video_segments()`를 `bulk_create()` + `transaction.atomic()`으로 개선
+
+#### 8. 에러 메시지 표준화
+- `constants.py`에 메시지 템플릿 상수 추가 (MSG_JOB_NOT_RETRIABLE 등)
+- Admin 액션에서 메시지 상수 사용
+
+#### 9. 테스트 코드 추가
+- `videos/tests/` 디렉토리 생성
+- `test_models.py` - 모델 단위 테스트
+- `test_status_config.py` - status_config 모듈 테스트
+- `test_services.py` - services 모듈 테스트
+- `test_constants.py` - constants 모듈 테스트
+- `pyproject.toml`에 pytest-django 의존성 추가
+
+#### 10. 문서화 개선
+- `_render_progress_steps()` docstring 상세화
+- 8단계 진행 시각화 설명 추가
+
+### 테스트 실행 방법
+```bash
+cd apps/backend
+uv sync --extra dev
+uv run pytest
+```
+
+---
+
+## 2026-02-03: 게임 캐릭터 숏폼 (bbiyack) 통합
+
+### 개요
+bbiyack(게임 캐릭터 숏폼 영상 생성기)를 기존 drama-shorts-web에 통합.
+
+**주요 차이점**:
+| 항목 | Drama Shorts | Game Character Shorts |
+|------|-------------|----------------------|
+| 입력 | topic, product | character_image, game_name, user_prompt |
+| 씬 구성 | 2씬 (8초×2) + CTA (2초) | 5씬 (4초×5) |
+| 총 길이 | ~18초 | ~20초 |
+| 전환 효과 | 직접 연결 | 페이드 트랜지션 |
+| 병렬 처리 | 순차 실행 | 5씬 병렬 가능 |
+
+### 신규 파일
+- `apps/backend/videos/game_services.py` - 게임 영상 생성 워크플로우
+- `apps/backend/videos/generators/game_state.py` - GameGeneratorState TypedDict
+- `apps/backend/videos/generators/game_prompts.py` - 게임 스크립트 프롬프트 템플릿
+- `apps/backend/videos/generators/nodes/game_planner.py` - Gemini 스크립트 생성 (langchain_google_genai)
+- `apps/backend/videos/generators/nodes/game_assets.py` - Nano Banana 프레임 생성
+- `apps/backend/videos/generators/nodes/game_video_generator.py` - Veo 영상 생성
+- `apps/backend/videos/generators/nodes/game_concatenator.py` - FFmpeg 페이드 병합
+- `apps/backend/videos/migrations/0007_add_game_character_support.py`
+
+### 변경 파일
+- `apps/backend/videos/models.py` - JobType, 게임 필드, GameFrame 모델
+- `apps/backend/videos/status_config.py` - GAME_* 상수 (NODE_ORDER, STATUS_ORDER 등)
+- `apps/backend/videos/constants.py` - GAME_SEGMENT_* 상수
+- `apps/backend/videos/services.py` - job_type 분기 로직
+- `apps/backend/videos/admin.py` - 조건부 UI, GameFrameAdmin/Inline
+- `apps/backend/videos/generators/utils/media.py` - download_image_as_base64()
+- `apps/backend/videos/generators/nodes/__init__.py` - 게임 노드 export
+
+### 변경 내용
+
+#### 1. 모델 확장 (`models.py`)
+```python
+class VideoGenerationJob(models.Model):
+    class JobType(models.TextChoices):
+        DRAMA = "drama", "드라마타이즈 광고"
+        GAME = "game", "게임 캐릭터 숏폼"
+
+    job_type = models.CharField(max_length=20, choices=JobType.choices, default=JobType.DRAMA)
+    character_image = models.ImageField(upload_to="game_characters/", null=True, blank=True)
+    game_name = models.CharField(max_length=200, blank=True)
+    user_prompt = models.TextField(blank=True)
+    character_description = models.TextField(blank=True)
+    game_locations_used = models.JSONField(default=list, blank=True)
+
+class GameFrame(models.Model):
+    """게임 캐릭터 숏폼의 각 씬 프레임/영상"""
+    job = models.ForeignKey(VideoGenerationJob, on_delete=models.CASCADE, related_name="game_frames")
+    scene_number = models.PositiveSmallIntegerField()
+    shot_type = models.CharField(max_length=50, blank=True)
+    game_location = models.CharField(max_length=200, blank=True)
+    prompt = models.TextField()
+    description_kr = models.TextField(blank=True)
+    image_file = models.ImageField(upload_to="game_frames/", null=True, blank=True)
+    video_file = models.FileField(upload_to="game_videos/", null=True, blank=True)
+```
+
+#### 2. 게임 워크플로우 (`game_services.py`)
+```python
+GAME_NODE_FUNCTIONS = {
+    "plan_game_scripts": plan_game_scripts,      # Gemini 5씬 스크립트
+    "generate_game_frames": generate_game_frames, # Nano Banana 5프레임 (병렬)
+    "generate_game_videos": generate_game_videos, # Veo 5영상 (병렬)
+    "merge_game_videos": merge_game_videos,       # FFmpeg xfade 병합
+}
+
+def generate_game_video_async(job_id: int, resume: bool = False):
+    """게임 영상 비동기 생성 (스레드)"""
+    ...
+```
+
+#### 3. Admin UI 조건부 표시
+- `get_fieldsets()`: job_type에 따라 드라마/게임 필드 분기
+- `get_inlines()`: 게임 타입일 때만 GameFrameInline 표시
+- `_render_game_progress_steps()`: 5단계 진행 표시 (대기→기획→프레임→영상→병합→완료)
+
+#### 4. 게임 스크립트 생성 (`game_planner.py`)
+langchain_google_genai 사용 (google.generativeai 대신):
+```python
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+def plan_game_scripts(state: GameGeneratorState) -> dict[str, Any]:
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", ...)
+    messages = [
+        SystemMessage(content=GAME_SCRIPT_SYSTEM_PROMPT),
+        HumanMessage(content=[
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}},
+            {"type": "text", "text": user_message},
+        ]),
+    ]
+    response = llm.invoke(messages)
+    ...
+```
+
+#### 5. 병렬 처리 (`game_assets.py`, `game_video_generator.py`)
+```python
+with concurrent.futures.ThreadPoolExecutor(max_workers=GAME_MAX_WORKERS) as executor:
+    futures = {executor.submit(generate_single_frame, ...): i for i, script in enumerate(scripts)}
+    for future in concurrent.futures.as_completed(futures):
+        ...
+```
+
+#### 6. FFmpeg 페이드 병합 (`game_concatenator.py`)
+```python
+def _merge_videos_with_fade(video_paths: list[str], fade_duration: float = 0.5) -> bytes:
+    """xfade로 페이드 트랜지션 병합"""
+    filter_parts = []
+    for i in range(len(video_paths) - 1):
+        filter_parts.append(f"[{i}:v][{i+1}:v]xfade=transition=fade:duration={fade_duration}:offset={offset}...")
+    ...
+```
+
+### Architecture 업데이트
+
+```
+videos/
+├── models.py             # JobType, GameFrame 추가
+├── status_config.py      # GAME_* 상수 추가
+├── constants.py          # GAME_SEGMENT_* 상수 추가
+├── services.py           # job_type 분기
+├── game_services.py      # [신규] 게임 워크플로우
+├── admin.py              # 조건부 UI, GameFrameAdmin
+└── generators/
+    ├── game_state.py     # [신규] GameGeneratorState
+    ├── game_prompts.py   # [신규] 게임 프롬프트
+    ├── utils/media.py    # download_image_as_base64 추가
+    └── nodes/
+        ├── game_planner.py         # [신규] Gemini 스크립트
+        ├── game_assets.py          # [신규] 프레임 생성
+        ├── game_video_generator.py # [신규] 영상 생성
+        └── game_concatenator.py    # [신규] 병합
+```
+
+### 남은 작업
+- [ ] `videos/tests/test_game_services.py` 테스트 코드 작성
+- [ ] 실제 게임 영상 생성 테스트
+- [ ] 병렬 처리 성능 확인

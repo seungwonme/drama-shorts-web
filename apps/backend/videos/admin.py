@@ -6,17 +6,38 @@ from django.utils.safestring import mark_safe
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
 
-from .models import Product, ProductImage, VideoAsset, VideoGenerationJob, VideoSegment
+from .constants import (
+    MSG_JOB_CANCELLED,
+    MSG_JOB_FAILED,
+    MSG_JOB_NEEDS_RESTART,
+    MSG_JOB_NOT_COMPLETED,
+    MSG_JOB_NOT_IN_PROGRESS,
+    MSG_JOB_NOT_RESUMABLE,
+    MSG_JOB_NOT_RETRIABLE,
+    MSG_JOB_RESUMED,
+    MSG_JOB_STARTED,
+    MSG_JOBS_DELETED,
+    MSG_JOBS_STARTED,
+    MSG_NO_ELIGIBLE_JOBS,
+)
+from .models import GameFrame, Product, ProductImage, VideoAsset, VideoGenerationJob, VideoSegment
 from .status_config import (
+    # Drama workflow
     IN_PROGRESS_STATUSES,
     PROGRESS_PERCENTAGES,
     PROGRESS_STEPS,
     STATUS_COLORS,
     STATUS_ORDER,
+    TOTAL_STEPS,
     get_progress_percent,
     get_status_color,
     get_status_order,
     is_in_progress,
+    # Game workflow
+    GAME_PROGRESS_STEPS,
+    GAME_TOTAL_STEPS,
+    get_game_progress_percent,
+    get_game_status_order,
 )
 
 # Group 모델 숨기기 (사용하지 않음)
@@ -284,11 +305,57 @@ class VideoSegmentInline(TabularInline):
     last_frame_preview.short_description = "마지막 프레임"
 
 
+class GameFrameInline(TabularInline):
+    """게임 프레임 인라인"""
+    model = GameFrame
+    extra = 0
+    readonly_fields = [
+        "scene_number",
+        "shot_type",
+        "game_location",
+        "description_kr",
+        "image_preview",
+        "video_preview",
+    ]
+    fields = [
+        "scene_number",
+        "shot_type",
+        "game_location",
+        "description_kr",
+        "image_preview",
+        "video_preview",
+    ]
+    can_delete = False
+    tab = True
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def image_preview(self, obj):
+        if obj.image_file:
+            return format_html(
+                '<img src="{}" width="80" height="142" style="object-fit: cover; border-radius: 4px;" />',
+                obj.image_file.url,
+            )
+        return "-"
+    image_preview.short_description = "프레임"
+
+    def video_preview(self, obj):
+        if obj.video_file:
+            return format_html(
+                '<a href="{}" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium">다운로드</a>',
+                obj.video_file.url,
+            )
+        return "-"
+    video_preview.short_description = "영상"
+
+
 @admin.register(VideoGenerationJob)
 class VideoGenerationJobAdmin(ModelAdmin):
     list_display = [
         "id",
-        "topic",
+        "job_type_badge",
+        "topic_or_game",
         "video_style_badge",
         "product",
         "status_badge",
@@ -297,11 +364,11 @@ class VideoGenerationJobAdmin(ModelAdmin):
         "segment_count",
         "video_preview",
         "created_at",
-        "row_actions",  # 행별 액션 버튼
+        "row_actions",
     ]
-    list_filter = ["status", "video_style", "product", "created_at"]
-    search_fields = ["topic", "script", "product__name"]
-    list_display_links = ["id", "topic"]
+    list_filter = ["job_type", "status", "video_style", "product", "created_at"]
+    search_fields = ["topic", "script", "product__name", "game_name"]
+    list_display_links = ["id", "topic_or_game"]
     readonly_fields = [
         "status",
         "current_step",
@@ -310,16 +377,24 @@ class VideoGenerationJobAdmin(ModelAdmin):
         "script_json",
         "product_detail",
         "character_details",
+        "character_description",
+        "game_locations_used",
         "first_frame_preview",
         "scene1_last_frame_preview",
         "cta_last_frame_preview",
+        "character_image_preview",
         "final_video",
         "skipped_segments",
         "created_at",
         "updated_at",
     ]
-    inlines = [VideoSegmentInline]
     autocomplete_fields = ["product"]
+
+    def get_inlines(self, request, obj):
+        """job_type에 따라 다른 인라인 표시"""
+        if obj and obj.job_type == VideoGenerationJob.JobType.GAME:
+            return [GameFrameInline]
+        return [VideoSegmentInline]
 
     # 목록 페이지 상단 버튼 (선택된 항목들에 대해)
     actions = ["bulk_generate_video_action", "bulk_delete_selected"]
@@ -387,55 +462,38 @@ class VideoGenerationJobAdmin(ModelAdmin):
             return ""
         return f'hx-get="/admin/videos/videogenerationjob/htmx/{job.pk}/{endpoint}/" hx-trigger="every {interval}" hx-swap="outerHTML"'
 
-    def htmx_status_view(self, request, job_id):
+    def _htmx_view(self, job_id, render_fn):
+        """Common HTMX view handler with job lookup and error handling.
+
+        Args:
+            job_id: Job primary key
+            render_fn: Function that takes job and returns HTML string
+
+        Returns:
+            HttpResponse with rendered HTML or "-" if job not found
+        """
         from django.http import HttpResponse
 
         try:
             job = VideoGenerationJob.objects.get(pk=job_id)
+            return HttpResponse(render_fn(job))
         except VideoGenerationJob.DoesNotExist:
             return HttpResponse("-")
 
-        return HttpResponse(self._render_status_badge(job))
+    def htmx_status_view(self, request, job_id):
+        return self._htmx_view(job_id, self._render_status_badge)
 
     def htmx_progress_view(self, request, job_id):
-        from django.http import HttpResponse
-
-        try:
-            job = VideoGenerationJob.objects.get(pk=job_id)
-        except VideoGenerationJob.DoesNotExist:
-            return HttpResponse("-")
-
-        return HttpResponse(self._render_progress_bar(job))
+        return self._htmx_view(job_id, self._render_progress_bar)
 
     def htmx_current_step_view(self, request, job_id):
-        from django.http import HttpResponse
-
-        try:
-            job = VideoGenerationJob.objects.get(pk=job_id)
-        except VideoGenerationJob.DoesNotExist:
-            return HttpResponse("-")
-
-        return HttpResponse(self._render_current_step(job))
+        return self._htmx_view(job_id, self._render_current_step)
 
     def htmx_row_actions_view(self, request, job_id):
-        from django.http import HttpResponse
-
-        try:
-            job = VideoGenerationJob.objects.get(pk=job_id)
-        except VideoGenerationJob.DoesNotExist:
-            return HttpResponse("-")
-
-        return HttpResponse(self._render_row_actions(job))
+        return self._htmx_view(job_id, self._render_row_actions)
 
     def htmx_progress_steps_view(self, request, job_id):
-        from django.http import HttpResponse
-
-        try:
-            job = VideoGenerationJob.objects.get(pk=job_id)
-        except VideoGenerationJob.DoesNotExist:
-            return HttpResponse("-")
-
-        return HttpResponse(self._render_progress_steps(job))
+        return self._htmx_view(job_id, self._render_progress_steps)
 
     def get_actions_detail(self, request, object_id=None):
         """상태에 따라 표시할 액션 결정 - UnfoldAction 객체 리스트 반환"""
@@ -513,54 +571,90 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
         return actions
 
-    fieldsets = (
-        ("입력", {"fields": ("topic", "video_style", "script", "product", "product_image_url")}),
-        ("에셋", {"fields": ("last_cta_asset", "sound_effect_asset")}),
-        (
-            "진행 상황",
-            {
-                "fields": ("progress_steps_display",),
-            },
-        ),
-        (
-            "상태",
-            {
-                "fields": ("status", "current_step", "error_message"),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "기획 결과",
-            {
-                "fields": ("script_json", "product_detail", "character_details"),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "프레임 이미지",
-            {
-                "fields": (
-                    "first_frame_preview",
-                    "scene1_last_frame_preview",
-                    "cta_last_frame_preview",
+    def get_fieldsets(self, request, obj=None):
+        """job_type에 따라 다른 필드셋 반환"""
+        # 게임 캐릭터 타입
+        if obj and obj.job_type == VideoGenerationJob.JobType.GAME:
+            return (
+                ("작업 유형", {"fields": ("job_type",)}),
+                ("게임 입력", {"fields": ("character_image", "character_image_preview", "game_name", "user_prompt")}),
+                (
+                    "진행 상황",
+                    {"fields": ("progress_steps_display",)},
                 ),
-                "classes": ("collapse",),
-            },
-        ),
-        (
-            "결과",
-            {
-                "fields": ("final_video", "skipped_segments"),
-            },
-        ),
-        (
-            "메타",
-            {
-                "fields": ("created_at", "updated_at"),
-                "classes": ("collapse",),
-            },
-        ),
-    )
+                (
+                    "상태",
+                    {
+                        "fields": ("status", "current_step", "error_message"),
+                        "classes": ("collapse",),
+                    },
+                ),
+                (
+                    "기획 결과",
+                    {
+                        "fields": ("character_description", "game_locations_used", "script_json"),
+                        "classes": ("collapse",),
+                    },
+                ),
+                (
+                    "결과",
+                    {"fields": ("final_video",)},
+                ),
+                (
+                    "메타",
+                    {
+                        "fields": ("created_at", "updated_at"),
+                        "classes": ("collapse",),
+                    },
+                ),
+            )
+
+        # 드라마타이즈 광고 타입 (기본)
+        return (
+            ("작업 유형", {"fields": ("job_type",)}),
+            ("입력", {"fields": ("topic", "video_style", "script", "product", "product_image_url")}),
+            ("에셋", {"fields": ("last_cta_asset", "sound_effect_asset")}),
+            (
+                "진행 상황",
+                {"fields": ("progress_steps_display",)},
+            ),
+            (
+                "상태",
+                {
+                    "fields": ("status", "current_step", "error_message"),
+                    "classes": ("collapse",),
+                },
+            ),
+            (
+                "기획 결과",
+                {
+                    "fields": ("script_json", "product_detail", "character_details"),
+                    "classes": ("collapse",),
+                },
+            ),
+            (
+                "프레임 이미지",
+                {
+                    "fields": (
+                        "first_frame_preview",
+                        "scene1_last_frame_preview",
+                        "cta_last_frame_preview",
+                    ),
+                    "classes": ("collapse",),
+                },
+            ),
+            (
+                "결과",
+                {"fields": ("final_video", "skipped_segments")},
+            ),
+            (
+                "메타",
+                {
+                    "fields": ("created_at", "updated_at"),
+                    "classes": ("collapse",),
+                },
+            ),
+        )
 
     @action(description="영상 생성 실행", url_path="generate_video_action")
     def generate_video_action(self, request, object_id):
@@ -576,7 +670,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
         if job.status not in allowed_statuses:
             self.message_user(
                 request,
-                f"Job #{job.id}은(는) 재시도 불가능한 상태입니다. (현재: {job.get_status_display()})",
+                MSG_JOB_NOT_RETRIABLE.format(job_id=job.id, status=job.get_status_display()),
                 level="warning",
             )
             return redirect(request.META.get("HTTP_REFERER", ".."))
@@ -600,13 +694,13 @@ class VideoGenerationJobAdmin(ModelAdmin):
         if should_resume:
             self.message_user(
                 request,
-                f"Job #{job.id} 영상 생성 시작됨 (재개 지점: {entry_point}). 진행 상황은 자동으로 업데이트됩니다.",
+                MSG_JOB_RESUMED.format(job_id=job.id, entry_point=entry_point),
                 level="success",
             )
         else:
             self.message_user(
                 request,
-                f"Job #{job.id} 영상 생성 시작됨. 진행 상황은 자동으로 업데이트됩니다.",
+                MSG_JOB_STARTED.format(job_id=job.id),
                 level="success",
             )
 
@@ -624,7 +718,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
         if job.status != VideoGenerationJob.Status.FAILED:
             self.message_user(
                 request,
-                f"Job #{job.id}은(는) 재개할 수 없는 상태입니다. (현재: {job.get_status_display()})",
+                MSG_JOB_NOT_RESUMABLE.format(job_id=job.id, status=job.get_status_display()),
                 level="warning",
             )
             return redirect(request.META.get("HTTP_REFERER", ".."))
@@ -634,7 +728,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
         if entry_point == "plan_script":
             self.message_user(
                 request,
-                f"Job #{job.id}은(는) 처음부터 재시도가 필요합니다. '영상 생성 실행' 버튼을 사용하세요.",
+                MSG_JOB_NEEDS_RESTART.format(job_id=job.id),
                 level="warning",
             )
             return redirect(request.META.get("HTTP_REFERER", ".."))
@@ -649,7 +743,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
         self.message_user(
             request,
-            f"Job #{job.id} 재개됨 (재개 지점: {entry_point}). 진행 상황은 자동으로 업데이트됩니다.",
+            MSG_JOB_RESUMED.format(job_id=job.id, entry_point=entry_point),
             level="success",
         )
 
@@ -665,7 +759,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
         if not is_in_progress(job.status):
             self.message_user(
                 request,
-                f"Job #{job.id}은(는) 진행중 상태가 아닙니다. (현재: {job.get_status_display()})",
+                MSG_JOB_NOT_IN_PROGRESS.format(job_id=job.id, status=job.get_status_display()),
                 level="warning",
             )
             return redirect(request.META.get("HTTP_REFERER", ".."))
@@ -677,151 +771,88 @@ class VideoGenerationJobAdmin(ModelAdmin):
         job.current_step = "취소됨"
         job.save(update_fields=["status", "failed_at_status", "error_message", "current_step"])
 
-        self.message_user(request, f"Job #{job.id} 작업이 취소되었습니다.", level="success")
+        self.message_user(request, MSG_JOB_CANCELLED.format(job_id=job.id), level="success")
+        return redirect(request.META.get("HTTP_REFERER", ".."))
+
+    def _execute_rework_action(self, request, object_id, rework_fn, success_msg: str):
+        """Execute a rework action with common validation and error handling.
+
+        Args:
+            request: HTTP request
+            object_id: Job ID
+            rework_fn: Rework service function to call
+            success_msg: Success message to display
+
+        Returns:
+            HTTP redirect response
+        """
+        from django.shortcuts import redirect
+
+        job = self.get_object(request, object_id)
+
+        if job.status != VideoGenerationJob.Status.COMPLETED:
+            self.message_user(
+                request,
+                MSG_JOB_NOT_COMPLETED.format(job_id=job.id),
+                level="warning",
+            )
+            return redirect(request.META.get("HTTP_REFERER", ".."))
+
+        try:
+            rework_fn(job)
+            self.message_user(request, f"Job #{job.id} {success_msg}", level="success")
+        except Exception as e:
+            self.message_user(request, MSG_JOB_FAILED.format(job_id=job.id, error=e), level="error")
+
         return redirect(request.META.get("HTTP_REFERER", ".."))
 
     @action(description="첫 프레임 재생성 (Nano Banana)", url_path="regenerate_first_frame_action")
     def regenerate_first_frame_action(self, request, object_id):
-        from django.shortcuts import redirect
-
         from .rework_services import regenerate_first_frame
 
-        job = self.get_object(request, object_id)
-
-        if job.status != VideoGenerationJob.Status.COMPLETED:
-            self.message_user(
-                request,
-                f"Job #{job.id}은(는) 완료 상태가 아닙니다.",
-                level="warning",
-            )
-            return redirect(request.META.get("HTTP_REFERER", ".."))
-
-        try:
-            regenerate_first_frame(job)
-            self.message_user(
-                request,
-                f"Job #{job.id} 첫 프레임 재생성 완료. Scene 1, Scene 2, 최종 영상도 재생성 권장.",
-                level="success",
-            )
-        except Exception as e:
-            self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
-
-        return redirect(request.META.get("HTTP_REFERER", ".."))
+        return self._execute_rework_action(
+            request, object_id, regenerate_first_frame,
+            "첫 프레임 재생성 완료. Scene 1, Scene 2, 최종 영상도 재생성 권장."
+        )
 
     @action(description="Scene 1 재생성 (Veo)", url_path="regenerate_scene1_action")
     def regenerate_scene1_action(self, request, object_id):
-        from django.shortcuts import redirect
-
         from .rework_services import regenerate_scene1
 
-        job = self.get_object(request, object_id)
-
-        if job.status != VideoGenerationJob.Status.COMPLETED:
-            self.message_user(
-                request,
-                f"Job #{job.id}은(는) 완료 상태가 아닙니다.",
-                level="warning",
-            )
-            return redirect(request.META.get("HTTP_REFERER", ".."))
-
-        try:
-            regenerate_scene1(job)
-            self.message_user(
-                request,
-                f"Job #{job.id} Scene 1 재생성 완료. Scene 2, 최종 영상도 재생성 권장.",
-                level="success",
-            )
-        except Exception as e:
-            self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
-
-        return redirect(request.META.get("HTTP_REFERER", ".."))
+        return self._execute_rework_action(
+            request, object_id, regenerate_scene1,
+            "Scene 1 재생성 완료. Scene 2, 최종 영상도 재생성 권장."
+        )
 
     @action(
         description="CTA 마지막 프레임 재생성 (Nano Banana)",
         url_path="regenerate_cta_last_frame_action",
     )
     def regenerate_cta_last_frame_action(self, request, object_id):
-        from django.shortcuts import redirect
-
         from .rework_services import regenerate_cta_last_frame
 
-        job = self.get_object(request, object_id)
-
-        if job.status != VideoGenerationJob.Status.COMPLETED:
-            self.message_user(
-                request,
-                f"Job #{job.id}은(는) 완료 상태가 아닙니다.",
-                level="warning",
-            )
-            return redirect(request.META.get("HTTP_REFERER", ".."))
-
-        try:
-            regenerate_cta_last_frame(job)
-            self.message_user(
-                request,
-                f"Job #{job.id} CTA 마지막 프레임 재생성 완료. Scene 2, 최종 영상도 재생성 권장.",
-                level="success",
-            )
-        except Exception as e:
-            self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
-
-        return redirect(request.META.get("HTTP_REFERER", ".."))
+        return self._execute_rework_action(
+            request, object_id, regenerate_cta_last_frame,
+            "CTA 마지막 프레임 재생성 완료. Scene 2, 최종 영상도 재생성 권장."
+        )
 
     @action(description="Scene 2 재생성 (Veo)", url_path="regenerate_scene2_action")
     def regenerate_scene2_action(self, request, object_id):
-        from django.shortcuts import redirect
-
         from .rework_services import regenerate_scene2
 
-        job = self.get_object(request, object_id)
-
-        if job.status != VideoGenerationJob.Status.COMPLETED:
-            self.message_user(
-                request,
-                f"Job #{job.id}은(는) 완료 상태가 아닙니다.",
-                level="warning",
-            )
-            return redirect(request.META.get("HTTP_REFERER", ".."))
-
-        try:
-            regenerate_scene2(job)
-            self.message_user(
-                request,
-                f"Job #{job.id} Scene 2 재생성 완료. 최종 영상도 재생성 권장.",
-                level="success",
-            )
-        except Exception as e:
-            self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
-
-        return redirect(request.META.get("HTTP_REFERER", ".."))
+        return self._execute_rework_action(
+            request, object_id, regenerate_scene2,
+            "Scene 2 재생성 완료. 최종 영상도 재생성 권장."
+        )
 
     @action(description="최종 영상 병합 (FFmpeg)", url_path="regenerate_final_video_action")
     def regenerate_final_video_action(self, request, object_id):
-        from django.shortcuts import redirect
-
         from .rework_services import regenerate_final_video
 
-        job = self.get_object(request, object_id)
-
-        if job.status != VideoGenerationJob.Status.COMPLETED:
-            self.message_user(
-                request,
-                f"Job #{job.id}은(는) 완료 상태가 아닙니다.",
-                level="warning",
-            )
-            return redirect(request.META.get("HTTP_REFERER", ".."))
-
-        try:
-            regenerate_final_video(job)
-            self.message_user(
-                request,
-                f"Job #{job.id} 최종 영상 병합 완료.",
-                level="success",
-            )
-        except Exception as e:
-            self.message_user(request, f"Job #{job.id} 실패: {e}", level="error")
-
-        return redirect(request.META.get("HTTP_REFERER", ".."))
+        return self._execute_rework_action(
+            request, object_id, regenerate_final_video,
+            "최종 영상 병합 완료."
+        )
 
     # =========================================================================
     # 목록 페이지 액션 (버튼 형태)
@@ -837,7 +868,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
         count = eligible_jobs.count()
 
         if count == 0:
-            self.message_user(request, "대기중 또는 실패한 작업이 없습니다.", level="warning")
+            self.message_user(request, MSG_NO_ELIGIBLE_JOBS, level="warning")
             return
 
         started = 0
@@ -858,18 +889,14 @@ class VideoGenerationJobAdmin(ModelAdmin):
             generate_video_async(job.id, resume=should_resume)
             started += 1
 
-        self.message_user(
-            request,
-            f"{started}개 작업 시작됨. 진행 상황은 목록에서 자동으로 업데이트됩니다.",
-            level="success",
-        )
+        self.message_user(request, MSG_JOBS_STARTED.format(count=started), level="success")
 
     @admin.action(description="선택된 작업 삭제")
     def bulk_delete_selected(self, request, queryset):
         """선택된 작업 삭제"""
         count = queryset.count()
         queryset.delete()
-        self.message_user(request, f"{count}개 작업 삭제됨")
+        self.message_user(request, MSG_JOBS_DELETED.format(count=count))
 
     # =========================================================================
     # 행별 액션 버튼
@@ -911,8 +938,41 @@ class VideoGenerationJobAdmin(ModelAdmin):
         """각 행에 액션 버튼 표시"""
         return mark_safe(self._render_row_actions(obj))
 
+    @admin.display(description="유형")
+    def job_type_badge(self, obj):
+        """작업 유형 배지"""
+        type_colors = {
+            VideoGenerationJob.JobType.DRAMA: "bg-purple-100 text-purple-700",
+            VideoGenerationJob.JobType.GAME: "bg-cyan-100 text-cyan-700",
+        }
+        css_class = type_colors.get(obj.job_type, "bg-gray-100 text-gray-700")
+        return format_html(
+            '<span class="{} px-2 py-1 rounded-md text-xs font-medium">{}</span>',
+            css_class,
+            obj.get_job_type_display(),
+        )
+
+    @admin.display(description="주제/게임")
+    def topic_or_game(self, obj):
+        """드라마는 topic, 게임은 game_name 표시"""
+        if obj.job_type == VideoGenerationJob.JobType.GAME:
+            return obj.game_name or "-"
+        return obj.topic or "-"
+
+    @admin.display(description="캐릭터 이미지")
+    def character_image_preview(self, obj):
+        """캐릭터 이미지 미리보기"""
+        if obj.character_image:
+            return format_html(
+                '<img src="{}" width="180" height="320" style="object-fit: cover; border-radius: 8px;" />',
+                obj.character_image.url,
+            )
+        return "-"
+
     def video_style_badge(self, obj):
-        """영상 스타일 배지"""
+        """영상 스타일 배지 (드라마 타입만)"""
+        if obj.job_type == VideoGenerationJob.JobType.GAME:
+            return "-"
         style_colors = {
             "makjang_drama": "bg-purple-100 text-purple-700",
         }
@@ -940,12 +1000,19 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
     def _render_progress_bar(self, obj):
         """Render progress bar HTML with HTMX attributes."""
-        progress = get_progress_percent(obj.status)
+        # 게임 타입은 다른 진행률 함수 사용
+        if obj.job_type == VideoGenerationJob.JobType.GAME:
+            progress = get_game_progress_percent(obj.status)
+        else:
+            progress = get_progress_percent(obj.status)
         hx_attrs = self._get_htmx_attrs(obj, "progress")
 
         # Failed state
         if obj.status == VideoGenerationJob.Status.FAILED:
-            failed_progress = get_progress_percent(obj.failed_at_status) if obj.failed_at_status else 0
+            if obj.job_type == VideoGenerationJob.JobType.GAME:
+                failed_progress = get_game_progress_percent(obj.failed_at_status) if obj.failed_at_status else 0
+            else:
+                failed_progress = get_progress_percent(obj.failed_at_status) if obj.failed_at_status else 0
             if failed_progress > 0:
                 return f"""<div {hx_attrs}>
                     <div style="width: 100px; height: 8px; background: #fee2e2; border-radius: 4px; overflow: hidden;">
@@ -1002,6 +1069,15 @@ class VideoGenerationJobAdmin(ModelAdmin):
     current_step_display.short_description = "현재 단계"
 
     def segment_count(self, obj):
+        """세그먼트 또는 게임 프레임 수 표시"""
+        # 게임 타입
+        if obj.job_type == VideoGenerationJob.JobType.GAME:
+            total = obj.game_frames.count()
+            completed = obj.game_frames.exclude(video_file="").count()
+            if total == 0:
+                return "-"
+            return f"{completed}/{total}"
+        # 드라마 타입
         total = obj.segments.count()
         completed = obj.segments.filter(status=VideoSegment.Status.COMPLETED).count()
         if total == 0:
@@ -1054,8 +1130,44 @@ class VideoGenerationJobAdmin(ModelAdmin):
     cta_last_frame_preview.short_description = "CTA 마지막 프레임"
 
     def _render_progress_steps(self, obj):
-        """Render progress steps HTML with HTMX attributes."""
+        """Render progress steps HTML with HTMX attributes.
+
+        For Drama type (8-step):
+        1. 대기 (Pending)
+        2. 기획 (Planning) - Gemini AI script generation
+        3. 첫 프레임 (First Frame) - Nano Banana image generation
+        4. Scene 1 - Veo video generation
+        5. CTA 프레임 (CTA Frame) - Product CTA frame generation
+        6. Scene 2 - Veo video interpolation
+        7. 병합 (Concatenation) - FFmpeg video merge
+        8. 완료 (Completed)
+
+        For Game type (6-step):
+        1. 대기 (Pending)
+        2. 기획 (Planning) - Gemini AI script generation
+        3. 프레임 (Frames) - Nano Banana frame generation (5 parallel)
+        4. 영상 (Videos) - Veo video generation (5 parallel)
+        5. 병합 (Merge) - FFmpeg with fade transition
+        6. 완료 (Completed)
+
+        Uses HTMX polling (3s interval) for real-time updates during generation.
+
+        Args:
+            obj: VideoGenerationJob instance
+
+        Returns:
+            HTML string with styled progress cards and progress bar
+        """
         hx_attrs = self._get_htmx_attrs(obj, "progress-steps")
+
+        # 게임 타입은 다른 함수 사용
+        if obj.job_type == VideoGenerationJob.JobType.GAME:
+            current_order = get_game_status_order(obj.status)
+            if obj.status == VideoGenerationJob.Status.FAILED:
+                return self._render_game_failed_progress_steps(obj, hx_attrs)
+            return self._render_game_normal_progress_steps(obj, hx_attrs, current_order)
+
+        # 드라마 타입
         current_order = get_status_order(obj.status)
 
         # 실패 상태: 실패 지점까지 진행 상황 표시
@@ -1130,7 +1242,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
     def _render_failed_progress_steps(self, obj, hx_attrs: str) -> str:
         """Render progress steps for failed status."""
         failed_order = get_status_order(obj.failed_at_status) if obj.failed_at_status else 0
-        progress_percent = min(100, (failed_order / 7) * 100) if failed_order > 0 else 0
+        progress_percent = min(100, (failed_order / TOTAL_STEPS) * 100) if failed_order > 0 else 0
 
         error_html = self._render_error_box(obj.error_message)
         progress_bar = self._render_detail_progress_bar(progress_percent, "진행률 (실패 시점)", "#ef4444", "#fee2e2")
@@ -1146,7 +1258,7 @@ class VideoGenerationJobAdmin(ModelAdmin):
 
     def _render_normal_progress_steps(self, obj, hx_attrs: str, current_order: int) -> str:
         """Render progress steps for normal status."""
-        progress_percent = min(100, (current_order / 7) * 100)
+        progress_percent = min(100, (current_order / TOTAL_STEPS) * 100)
 
         # Use gradient for normal progress
         progress_bar_html = f"""
@@ -1176,8 +1288,58 @@ class VideoGenerationJobAdmin(ModelAdmin):
         html += "</div></div>"
         return html
 
+    def _render_game_failed_progress_steps(self, obj, hx_attrs: str) -> str:
+        """Render progress steps for failed game status."""
+        failed_order = get_game_status_order(obj.failed_at_status) if obj.failed_at_status else 0
+        progress_percent = min(100, (failed_order / GAME_TOTAL_STEPS) * 100) if failed_order > 0 else 0
+
+        error_html = self._render_error_box(obj.error_message)
+        progress_bar = self._render_detail_progress_bar(progress_percent, "진행률 (실패 시점)", "#ef4444", "#fee2e2")
+
+        # 게임은 6단계이므로 3열
+        html = f'<div {hx_attrs}>{error_html}{progress_bar}<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">'
+
+        for i, (status_key, label, description) in enumerate(GAME_PROGRESS_STEPS):
+            icon, bg_color, border_color, icon_color, text_color = self._get_step_style(i, failed_order, is_failed=True)
+            html += self._render_step_card(label, description, icon, bg_color, border_color, icon_color, text_color)
+
+        html += "</div></div>"
+        return html
+
+    def _render_game_normal_progress_steps(self, obj, hx_attrs: str, current_order: int) -> str:
+        """Render progress steps for normal game status."""
+        progress_percent = min(100, (current_order / GAME_TOTAL_STEPS) * 100)
+
+        progress_bar_html = f"""
+        <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-size: 14px; font-weight: 600; color: #374151;">전체 진행률</span>
+                <span style="font-size: 14px; font-weight: 600; color: #3b82f6;">{int(progress_percent)}%</span>
+            </div>
+            <div style="width: 100%; height: 12px; background: #e5e7eb; border-radius: 6px; overflow: hidden;">
+                <div style="width: {progress_percent}%; height: 100%; background: linear-gradient(90deg, #06b6d4, #22d3ee); border-radius: 6px; transition: width 0.5s ease;"></div>
+            </div>
+        </div>
+        """
+
+        # 게임은 6단계이므로 3열
+        html = f'<div {hx_attrs}>{progress_bar_html}<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">'
+
+        for i, (status_key, label, description) in enumerate(GAME_PROGRESS_STEPS):
+            icon, bg_color, border_color, icon_color, text_color = self._get_step_style(i, current_order)
+
+            # 현재 단계면 current_step 표시
+            step_info = ""
+            if i == current_order and obj.current_step:
+                step_info = f'<div style="font-size: 11px; color: #06b6d4; margin-top: 4px;">{obj.current_step}</div>'
+
+            html += self._render_step_card(label, description, icon, bg_color, border_color, icon_color, text_color, step_info)
+
+        html += "</div></div>"
+        return html
+
     def progress_steps_display(self, obj):
-        """단계별 진행 상황 표시 (7단계)"""
+        """단계별 진행 상황 표시"""
         return mark_safe(self._render_progress_steps(obj))
 
     progress_steps_display.short_description = "진행 상황"
@@ -1281,6 +1443,91 @@ class VideoSegmentAdmin(ModelAdmin):
             return format_html(
                 '<img src="{}" width="320" height="180" style="object-fit: cover; border-radius: 8px;" />',
                 obj.last_frame.url,
+            )
+        return "-"
+
+
+# =============================================================================
+# GameFrame Admin (독립 CRUD)
+# =============================================================================
+
+
+@admin.register(GameFrame)
+class GameFrameAdmin(ModelAdmin):
+    list_display = [
+        "id",
+        "job_link",
+        "scene_number",
+        "shot_type",
+        "game_location",
+        "image_preview",
+        "video_preview",
+    ]
+    list_filter = ["scene_number", "job__status"]
+    search_fields = ["job__game_name", "game_location", "prompt"]
+    list_display_links = ["id"]
+    autocomplete_fields = ["job"]
+
+    fieldsets = (
+        (None, {"fields": ("job", "scene_number", "shot_type", "game_location")}),
+        ("프롬프트", {"fields": ("prompt", "action", "camera", "description_kr")}),
+        (
+            "결과",
+            {
+                "fields": (
+                    "image_file",
+                    "image_preview_large",
+                    "video_file",
+                    "video_preview_large",
+                )
+            },
+        ),
+    )
+    readonly_fields = ["image_preview_large", "video_preview_large"]
+
+    @admin.display(description="작업")
+    def job_link(self, obj):
+        from django.urls import reverse
+
+        url = reverse("admin:videos_videogenerationjob_change", args=[obj.job_id])
+        game_name = obj.job.game_name[:30] if obj.job.game_name else "-"
+        return format_html('<a href="{}">{}</a>', url, game_name)
+
+    @admin.display(description="프레임")
+    def image_preview(self, obj):
+        if obj.image_file:
+            return format_html(
+                '<img src="{}" width="45" height="80" style="object-fit: cover; border-radius: 4px;" />',
+                obj.image_file.url,
+            )
+        return "-"
+
+    @admin.display(description="프레임 미리보기")
+    def image_preview_large(self, obj):
+        if obj.image_file:
+            return format_html(
+                '<img src="{}" width="180" height="320" style="object-fit: cover; border-radius: 8px;" />',
+                obj.image_file.url,
+            )
+        return "-"
+
+    @admin.display(description="영상")
+    def video_preview(self, obj):
+        if obj.video_file:
+            return format_html(
+                '<a href="{}" target="_blank" class="text-primary-600 hover:text-primary-700 font-medium">다운로드</a>',
+                obj.video_file.url,
+            )
+        return "-"
+
+    @admin.display(description="영상 미리보기")
+    def video_preview_large(self, obj):
+        if obj.video_file:
+            return format_html(
+                '<video width="270" height="480" controls style="border-radius: 8px;">'
+                '<source src="{}" type="video/mp4">'
+                "</video>",
+                obj.video_file.url,
             )
         return "-"
 

@@ -1,7 +1,15 @@
-"""Logging utilities with color support."""
+"""Logging utilities with color support.
+
+Integrates with Python's standard logging module while providing
+colored terminal output for development.
+"""
 
 import json
-from datetime import datetime
+import logging
+import sys
+
+# Create module logger
+logger = logging.getLogger("videos.generators")
 
 
 class Colors:
@@ -37,48 +45,78 @@ class Colors:
     BG_BLUE = "\033[44m"
 
 
-def log(message: str, level: str = "INFO") -> None:
-    """Print colored log with timestamp."""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def _is_tty() -> bool:
+    """Check if stdout is a terminal (supports colors)."""
+    return hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
-    level_colors = {
-        "INFO": Colors.CYAN,
-        "SUCCESS": Colors.BRIGHT_GREEN,
-        "WARNING": Colors.BRIGHT_YELLOW,
-        "ERROR": Colors.BRIGHT_RED,
-        "DEBUG": Colors.DIM,
+
+def log(message: str, level: str = "INFO") -> None:
+    """Log message using Python logging with optional color for terminals.
+
+    Args:
+        message: The message to log
+        level: Log level (INFO, SUCCESS, WARNING, ERROR, DEBUG)
+    """
+    level_map = {
+        "INFO": logging.INFO,
+        "SUCCESS": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "DEBUG": logging.DEBUG,
     }
 
-    color = level_colors.get(level, Colors.WHITE)
-    timestamp_color = Colors.DIM
+    log_level = level_map.get(level, logging.INFO)
 
-    print(
-        f"{timestamp_color}[{timestamp}]{Colors.RESET} "
-        f"{color}[{level}]{Colors.RESET} {message}"
-    )
+    # Add color prefix for terminal output
+    if _is_tty():
+        level_colors = {
+            "INFO": Colors.CYAN,
+            "SUCCESS": Colors.BRIGHT_GREEN,
+            "WARNING": Colors.BRIGHT_YELLOW,
+            "ERROR": Colors.BRIGHT_RED,
+            "DEBUG": Colors.DIM,
+        }
+        color = level_colors.get(level, Colors.WHITE)
+        message = f"{color}{message}{Colors.RESET}"
+
+    logger.log(log_level, message)
 
 
 def log_separator(title: str = "") -> None:
-    """Print separator line with optional title."""
+    """Log separator line with optional title."""
     if title:
-        print(f"\n{Colors.BRIGHT_MAGENTA}{'='*60}")
-        print(f"  {Colors.BOLD}{title}{Colors.RESET}")
-        print(f"{Colors.BRIGHT_MAGENTA}{'='*60}{Colors.RESET}")
+        if _is_tty():
+            msg = f"\n{Colors.BRIGHT_MAGENTA}{'='*60}\n  {Colors.BOLD}{title}{Colors.RESET}\n{Colors.BRIGHT_MAGENTA}{'='*60}{Colors.RESET}"
+        else:
+            msg = f"\n{'='*60}\n  {title}\n{'='*60}"
+        logger.info(msg)
     else:
-        print(f"{Colors.DIM}{'-' * 60}{Colors.RESET}")
+        if _is_tty():
+            logger.debug(f"{Colors.DIM}{'-' * 60}{Colors.RESET}")
+        else:
+            logger.debug("-" * 60)
 
 
 def log_json(data: dict, title: str = "") -> None:
-    """Pretty print JSON data with color."""
+    """Pretty print JSON data."""
+    formatted = json.dumps(data, indent=2, ensure_ascii=False)
     if title:
-        print(f"\n{Colors.BRIGHT_BLUE}[{title}]{Colors.RESET}")
-    print(f"{Colors.DIM}{json.dumps(data, indent=2, ensure_ascii=False)}{Colors.RESET}")
+        if _is_tty():
+            logger.debug(f"{Colors.BRIGHT_BLUE}[{title}]{Colors.RESET}\n{Colors.DIM}{formatted}{Colors.RESET}")
+        else:
+            logger.debug(f"[{title}]\n{formatted}")
+    else:
+        logger.debug(formatted)
 
 
 def log_prompt(prompt: str, title: str = "") -> None:
-    """Print prompt with highlighting."""
+    """Log prompt with highlighting."""
+    separator = "-" * 40
     if title:
-        print(f"\n{Colors.BRIGHT_CYAN}[{title}]{Colors.RESET}")
-    print(f"{Colors.DIM}{'-' * 40}{Colors.RESET}")
-    print(f"{Colors.WHITE}{prompt}{Colors.RESET}")
-    print(f"{Colors.DIM}{'-' * 40}{Colors.RESET}")
+        if _is_tty():
+            msg = f"{Colors.BRIGHT_CYAN}[{title}]{Colors.RESET}\n{Colors.DIM}{separator}{Colors.RESET}\n{prompt}\n{Colors.DIM}{separator}{Colors.RESET}"
+        else:
+            msg = f"[{title}]\n{separator}\n{prompt}\n{separator}"
+        logger.debug(msg)
+    else:
+        logger.debug(f"{separator}\n{prompt}\n{separator}")

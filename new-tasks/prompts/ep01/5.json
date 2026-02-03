@@ -1,0 +1,72 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": "Young Asian male, average build, expressive face. Short black hair, wearing a gaming headset on head.",
+      "clothing": "Black long-sleeve shirt, dark blue jeans. Casual gamer look.",
+      "voice": "Energetic and emotional, easily panicked but determined."
+    },
+    {
+      "id": "B",
+      "name": "GPT",
+      "gender": "male",
+      "age": "unknown",
+      "appearance": "PUBG character with level 3 military helmet completely covering face. Tactical and robotic posture.",
+      "clothing": "White dress shirt, dark jeans, tactical belt with holstered pistol.",
+      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다."
+    }
+  ],
+  "scene": {
+    "scene_number": 5,
+    "scene_name": "마무리",
+    "duration": 3,
+    "scene_setting": {
+      "location": "Behind concrete barrier, tense atmosphere with distant threat.",
+      "lighting": "Dramatic shadows from barrier, high contrast."
+    },
+    "camera_setup": {
+      "lens": "85mm",
+      "depth_of_field": "shallow, face in sharp focus",
+      "texture": "detailed facial expression, sweat, tension"
+    },
+    "mood_style": {
+      "genre": "Cliffhanger decision moment",
+      "color_tone": "Moody shadows with highlights on face"
+    },
+    "audio": {
+      "background": "Heartbeat sound, tense sustained note",
+      "fx": "heavy breathing, distant gunfire"
+    },
+    "timeline": [
+      {
+        "sequence": 1,
+        "timestamp": "00:15-00:18",
+        "camera": "[CU on A's face]",
+        "movement": "slow zoom in",
+        "focus": "A's determined expression",
+        "mood": "Suspenseful, cliffhanger",
+        "sfx": "heartbeat, heavy breathing",
+        "A": {
+          "action": "Crouched behind concrete barrier, breathing heavily. Peeks out cautiously to assess the threat. His expression shifts from fear to determination as he makes a decision.",
+          "dialogue": "",
+          "emotion": "Determined, thinking",
+          "position": "center, crouched behind cover"
+        },
+        "B": {
+          "action": "",
+          "dialogue": "",
+          "emotion": "",
+          "position": "not in scene"
+        }
+      }
+    ]
+  }
+}

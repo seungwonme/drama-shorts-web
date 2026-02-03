@@ -160,22 +160,42 @@ class ProductImage(models.Model):
 class VideoGenerationJob(models.Model):
     """영상 생성 작업"""
 
+    class JobType(models.TextChoices):
+        DRAMA = "drama", "드라마타이즈 광고"
+        GAME = "game", "게임 캐릭터 숏폼"
+
     class Status(models.TextChoices):
+        # 공통 상태
         PENDING = "pending", "대기중"
         PLANNING = "planning", "기획중"
+        COMPLETED = "completed", "완료"
+        FAILED = "failed", "실패"
+
+        # 드라마 전용 상태
         PREPARING = "preparing", "첫 프레임 생성중"
         GENERATING_S1 = "generating_s1", "Scene 1 생성중"
         PREPARING_CTA = "preparing_cta", "CTA 프레임 생성중"
         GENERATING_S2 = "generating_s2", "Scene 2 생성중"
         CONCATENATING = "concatenating", "병합중"
-        COMPLETED = "completed", "완료"
-        FAILED = "failed", "실패"
+
+        # 게임 캐릭터 전용 상태
+        GENERATING_FRAMES = "generating_frames", "프레임 생성중"
+        GENERATING_VIDEOS = "generating_videos", "영상 생성중"
+        MERGING = "merging", "영상 병합중"
 
     class VideoStyleChoice(models.TextChoices):
         """영상 스타일 선택"""
 
         MAKJANG_DRAMA = VideoStyle.MAKJANG_DRAMA.value, "B급 막장 드라마"
         LOTTERIA_STORY = VideoStyle.LOTTERIA_STORY.value, "롯데리아형 스토리"
+
+    # Job Type
+    job_type = models.CharField(
+        "작업 유형",
+        max_length=20,
+        choices=JobType.choices,
+        default=JobType.DRAMA,
+    )
 
     # 입력
     topic = models.CharField("주제", max_length=200, help_text="광고할 제품/서비스")
@@ -204,7 +224,41 @@ class VideoGenerationJob(models.Model):
         help_text="제품을 선택하지 않고 직접 URL 입력 시 사용",
     )
 
-    # 에셋 선택 (Job별로 다른 에셋 사용 가능)
+    # ==========================================================================
+    # 게임 캐릭터 전용 입력 필드
+    # ==========================================================================
+    character_image = models.ImageField(
+        "캐릭터 이미지",
+        upload_to="game_characters/",
+        blank=True,
+        help_text="게임 캐릭터 이미지 (게임 타입 전용)",
+    )
+    game_name = models.CharField(
+        "게임명",
+        max_length=200,
+        blank=True,
+        help_text="캐릭터가 들어갈 게임 이름 (예: PUBG, 원신)",
+    )
+    user_prompt = models.TextField(
+        "추가 프롬프트",
+        blank=True,
+        help_text="영상에 대한 추가 요청사항",
+    )
+    character_description = models.TextField(
+        "캐릭터 분석 결과",
+        blank=True,
+        help_text="AI가 분석한 캐릭터 외형 설명",
+    )
+    game_locations_used = models.JSONField(
+        "사용된 게임 장소",
+        default=list,
+        blank=True,
+        help_text="스크립트에 사용된 게임 내 장소 목록",
+    )
+
+    # ==========================================================================
+    # 드라마 전용 에셋 선택 필드
+    # ==========================================================================
     last_cta_asset = models.ForeignKey(
         VideoAsset,
         on_delete=models.SET_NULL,
@@ -213,7 +267,7 @@ class VideoGenerationJob(models.Model):
         related_name="jobs_as_cta",
         verbose_name="라스트 CTA 이미지",
         limit_choices_to={"asset_type": VideoAsset.AssetType.LAST_CTA_IMAGE},
-        help_text="선택하지 않으면 기본 활성화된 에셋 사용",
+        help_text="선택하지 않으면 기본 활성화된 에셋 사용 (드라마 타입 전용)",
     )
     sound_effect_asset = models.ForeignKey(
         VideoAsset,
@@ -223,7 +277,7 @@ class VideoGenerationJob(models.Model):
         related_name="jobs_as_sound",
         verbose_name="효과음",
         limit_choices_to={"asset_type": VideoAsset.AssetType.SOUND_EFFECT},
-        help_text="선택하지 않으면 기본 활성화된 에셋 사용",
+        help_text="선택하지 않으면 기본 활성화된 에셋 사용 (드라마 타입 전용)",
     )
 
     # 상태
@@ -330,3 +384,65 @@ class VideoSegment(models.Model):
 
     def __str__(self):
         return f"Segment {self.segment_index}: {self.title}"
+
+
+# =============================================================================
+# Game Character Models (게임 캐릭터 숏폼 전용)
+# =============================================================================
+
+
+def game_frame_image_path(instance, filename):
+    """게임 프레임 이미지 경로: jobs/{job_id}/game_frames/{filename}"""
+    return f"jobs/{instance.job_id}/game_frames/{filename}"
+
+
+def game_segment_video_path(instance, filename):
+    """게임 세그먼트 영상 경로: jobs/{job_id}/game_segments/{filename}"""
+    return f"jobs/{instance.job_id}/game_segments/{filename}"
+
+
+class GameFrame(models.Model):
+    """게임 캐릭터 숏폼의 각 씬 시작 프레임"""
+
+    job = models.ForeignKey(
+        VideoGenerationJob,
+        on_delete=models.CASCADE,
+        related_name="game_frames",
+        verbose_name="영상 작업",
+    )
+    scene_number = models.PositiveSmallIntegerField("씬 번호")
+
+    # 스크립트 정보
+    shot_type = models.CharField("샷 타입", max_length=50, blank=True)
+    game_location = models.CharField("게임 장소", max_length=200, blank=True)
+    prompt = models.TextField("영상 생성 프롬프트")
+    action = models.CharField("액션", max_length=200, blank=True)
+    camera = models.CharField("카메라 움직임", max_length=200, blank=True)
+    description_kr = models.TextField("한글 설명", blank=True)
+
+    # 생성 결과
+    image_file = models.ImageField(
+        "시작 프레임 이미지",
+        upload_to=game_frame_image_path,
+        blank=True,
+    )
+    image_url = models.URLField("이미지 URL", blank=True)
+    video_file = models.FileField(
+        "생성된 영상",
+        upload_to=game_segment_video_path,
+        blank=True,
+    )
+    video_url = models.URLField("영상 URL", blank=True)
+
+    # 메타
+    created_at = models.DateTimeField("생성일", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "게임 프레임"
+        verbose_name_plural = "게임 프레임"
+        ordering = ["scene_number"]
+        unique_together = [["job", "scene_number"]]
+
+    def __str__(self):
+        location = self.game_location or "Unknown"
+        return f"Scene {self.scene_number}: {location}"

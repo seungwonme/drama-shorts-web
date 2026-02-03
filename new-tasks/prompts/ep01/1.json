@@ -1,0 +1,93 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": "Young Asian male, average build, expressive face. Short black hair, wearing a gaming headset on head.",
+      "clothing": "Black long-sleeve shirt, dark blue jeans. Casual gamer look.",
+      "voice": "Energetic and emotional, easily panicked but determined."
+    },
+    {
+      "id": "B",
+      "name": "GPT",
+      "gender": "male",
+      "age": "unknown",
+      "appearance": "PUBG character with level 3 military helmet completely covering face. Tactical and robotic posture.",
+      "clothing": "White dress shirt, dark jeans, tactical belt with holstered pistol.",
+      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다."
+    }
+  ],
+  "scene": {
+    "scene_number": 1,
+    "scene_name": "훅",
+    "duration": 5,
+    "scene_setting": {
+      "location": "Dark gaming room with glowing monitor, gaming chair, keyboard and mouse on desk.",
+      "lighting": "Strong blue-white light from monitor only, creating silhouette effect on character."
+    },
+    "camera_setup": {
+      "lens": "35mm",
+      "depth_of_field": "shallow, cinematic bokeh",
+      "texture": "realistic skin texture, glowing monitor light"
+    },
+    "mood_style": {
+      "genre": "Surreal sci-fi portal transition",
+      "color_tone": "Dark room with intense blue-white monitor glow"
+    },
+    "audio": {
+      "background": "Silent tension building to digital surge",
+      "fx": "Digital whoosh, electrical crackling, vortex sound"
+    },
+    "timeline": [
+      {
+        "sequence": 1,
+        "timestamp": "00:00-00:02",
+        "camera": "[MS from behind]",
+        "movement": "slow push toward monitor",
+        "focus": "character silhouette against bright screen",
+        "mood": "Calm before storm",
+        "sfx": "keyboard typing, mouse clicks",
+        "A": {
+          "action": "Sitting in gaming chair, typing on keyboard, staring at monitor intently.",
+          "dialogue": "",
+          "emotion": "Focused",
+          "position": "center, back to camera"
+        },
+        "B": {
+          "action": "",
+          "dialogue": "",
+          "emotion": "",
+          "position": "not in scene"
+        }
+      },
+      {
+        "sequence": 2,
+        "timestamp": "00:02-00:05",
+        "camera": "[MS from behind, continuing push]",
+        "movement": "accelerating push toward monitor",
+        "focus": "swirling vortex emerging from screen",
+        "mood": "Surreal, shocking",
+        "sfx": "digital whoosh, electrical crackling intensifies",
+        "A": {
+          "action": "Suddenly pulled forward by invisible force. Arms reach out desperately. Body stretches unnaturally toward the glowing screen as he gets sucked into the digital world.",
+          "dialogue": "",
+          "emotion": "Shocked, desperate",
+          "position": "center, being pulled into monitor"
+        },
+        "B": {
+          "action": "",
+          "dialogue": "",
+          "emotion": "",
+          "position": "not in scene"
+        }
+      }
+    ]
+  }
+}
