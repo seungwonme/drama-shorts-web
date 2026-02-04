@@ -1,0 +1,105 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": {
+        "face": "Young Asian male with neutral expression, clean-shaven, oval face shape",
+        "body_type": "Average build, athletic posture",
+        "hair": "Short black hair, neat cut",
+        "skin_tone": "Fair East Asian skin tone",
+        "distinguishing_feature": "WEARING LARGE GAMING HEADSET WITH MICROPHONE on head"
+      },
+      "clothing": "Black long-sleeve shirt, dark blue pants, black sneakers, fingerless gaming gloves",
+      "voice": "Energetic and emotional, easily panicked but determined, speaks casual Korean",
+      "speaking_visual": "mouth opens wide and speaks expressively"
+    },
+    {
+      "id": "C",
+      "name": "치크",
+      "gender": "neutral",
+      "age": "N/A",
+      "appearance": {
+        "face": "Cute round chick face with small black eyes and orange beak",
+        "body_type": "Small fluffy yellow chick body with tiny wings",
+        "hair": "Yellow fluffy feathers covering body",
+        "skin_tone": "Bright yellow feathers",
+        "distinguishing_feature": "SMALL YELLOW CHICK wearing DESERT CAMO MILITARY HELMET, orange beak and orange feet"
+      },
+      "clothing": "Desert camouflage military helmet only",
+      "voice": "Says only 'Peep' (subtitled in post-production)",
+      "speaking_visual": "BOUNCES up and down, FLAPS tiny wings"
+    }
+  ],
+  "scene": {
+    "scene_number": 1,
+    "scene_name": "치크 등장 + 좌절",
+    "duration": 5,
+    "scene_setting": {
+      "location": "Open grassy field with blue sky. Supply crate landed nearby with red parachute.",
+      "lighting": "Bright daylight, clear visibility."
+    },
+    "camera_setup": {
+      "lens": "35mm",
+      "depth_of_field": "medium focus",
+      "texture": "lush grass, cute character detail"
+    },
+    "mood_style": {
+      "genre": "Comedic surprise to despair to hope",
+      "color_tone": "Vibrant greens and blues"
+    },
+    "audio": {
+      "background": "Comedic timing music",
+      "fx": "Chick chirps, dramatic despair sound"
+    },
+    "timeline": [
+      {
+        "sequence": 1,
+        "timestamp": "00:00-00:01",
+        "speaker": "C",
+        "camera": "Wide shot showing supply crate",
+        "movement": "quick pan to reveal chick",
+        "mood": "Comedic surprise",
+        "visual_description": "A small yellow chick wearing a desert camo military helmet suddenly POPS UP from behind the landed supply crate. The chick BOUNCES and TILTS its head curiously, FLAPPING tiny wings. The Gamer stands nearby, FROZEN in shock, MOUTH SHUT.",
+        "dialogue": "Peep?"
+      },
+      {
+        "sequence": 2,
+        "timestamp": "00:01-00:03",
+        "speaker": "A",
+        "camera": "Medium shot on Gamer's shocked face",
+        "movement": "static",
+        "mood": "Frustrated disbelief",
+        "visual_description": "The young Asian man with GAMING HEADSET stares in disbelief at the chick. His MOUTH OPENS WIDE as he SHOUTS in frustration. His arms gesture wildly at the chick. The small yellow chick with military helmet stands STILL, looking up at him innocently.",
+        "dialogue": "보급품이 아니라 병아리잖아!"
+      },
+      {
+        "sequence": 3,
+        "timestamp": "00:03-00:04",
+        "speaker": "A",
+        "camera": "Close-up on Gamer's face",
+        "movement": "slow zoom in",
+        "mood": "Utter despair",
+        "visual_description": "The young Asian man with GAMING HEADSET drops to his knees in despair. His MOUTH MOVES as he speaks with utter defeat. His face shows hopelessness. The chick watches from the side, STILL.",
+        "dialogue": "망했다 난 이제 평생 못나가겠네"
+      },
+      {
+        "sequence": 4,
+        "timestamp": "00:04-00:05",
+        "speaker": "C",
+        "camera": "Close-up on Cheek",
+        "movement": "slight push in",
+        "mood": "Encouraging determination",
+        "visual_description": "The small yellow chick with desert camo military helmet BOUNCES energetically and FLAPS its tiny wings with determination. It puffs up its chest confidently. The Gamer watches with MOUTH SHUT, confused but hopeful.",
+        "dialogue": "Peep!"
+      }
+    ]
+  }
+}

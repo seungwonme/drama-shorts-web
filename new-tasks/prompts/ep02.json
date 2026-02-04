@@ -1,0 +1,252 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": {
+        "face": "Young Asian male with neutral expression, clean-shaven, oval face shape",
+        "body_type": "Average build, athletic posture",
+        "hair": "Short black hair, neat cut",
+        "skin_tone": "Fair East Asian skin tone",
+        "distinguishing_feature": "WEARING LARGE GAMING HEADSET WITH MICROPHONE on head"
+      },
+      "clothing": "Black long-sleeve shirt, dark blue pants, black sneakers, fingerless gaming gloves",
+      "voice": "Energetic and emotional, easily panicked but determined, speaks casual Korean",
+      "speaking_visual": "mouth opens wide and speaks expressively"
+    },
+    {
+      "id": "B",
+      "name": "GPT",
+      "gender": "neutral",
+      "age": "N/A",
+      "appearance": {
+        "face": "Simple cute face with two round black eyes on cube-shaped head",
+        "body_type": "Small mint-green humanoid robot with cube body, stubby arms and legs",
+        "hair": "None",
+        "skin_tone": "Mint green with soft matte texture",
+        "distinguishing_feature": "MINT-GREEN CUBE ROBOT with WHITE CHATGPT LOGO on chest and TWO ROUND BLACK EYES"
+      },
+      "clothing": "None - robot body",
+      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다",
+      "speaking_visual": "entire body BOUNCES up and down rhythmically, eyes BLINK rapidly"
+    }
+  ],
+
+  "scenes": [
+    {
+      "scene_number": 1,
+      "scene_name": "맞저격 + 회상",
+      "duration": 5,
+
+      "scene_setting": {
+        "location": "Post-apocalyptic urban street. Destroyed concrete buildings, broken windows, rubble.",
+        "lighting": "Harsh daylight, high contrast shadows from ruined buildings."
+      },
+
+      "camera_setup": {
+        "lens": "85mm",
+        "depth_of_field": "shallow, dramatic focus",
+        "texture": "sharp detail on action, muzzle flash effects"
+      },
+
+      "mood_style": {
+        "genre": "Action triumph with nostalgic flashback",
+        "color_tone": "Grey urban tones with muzzle flash highlights"
+      },
+
+      "audio": {
+        "background": "Tense music swelling to triumphant note",
+        "fx": "Sniper rifle shot, shell casing, echoed flashback gunshots"
+      },
+
+      "timeline": [
+        {
+          "sequence": 1,
+          "timestamp": "00:00-00:01",
+          "speaker": "A",
+          "camera": "Over shoulder shot, POV scope view",
+          "movement": "quick zoom in on target",
+          "mood": "Confident, bravado",
+          "visual_description": "A young Asian man with GAMING HEADSET and black long-sleeve shirt crouches behind cover, holding a sniper rifle. He aims through the scope and fires confidently. The shot hits the distant enemy instantly. He smirks with satisfaction, his MOUTH OPENS TO SPEAK with bravado. The mint-green cube robot stands beside him, completely STILL and SILENT.",
+          "dialogue": "남자는 맞저격이지.",
+        },
+        {
+          "sequence": 2,
+          "timestamp": "00:01-00:02",
+          "speaker": "B",
+          "camera": "Medium shot on robot",
+          "movement": "slight push in",
+          "mood": "Impressed, analytical",
+          "visual_description": "The mint-green cube robot with ChatGPT logo BOUNCES up and down as it SPEAKS, round black eyes BLINKING with approval. The gamer stands confidently beside it, MOUTH CLOSED, nodding.",
+          "dialogue": "에임 연습의 효과가 대단합니다.",
+        },
+        {
+          "sequence": 3,
+          "timestamp": "00:02-00:03",
+          "speaker": "None",
+          "camera": "Split screen flashback effect",
+          "movement": "slow motion for flashback",
+          "mood": "Nostalgic, contrast",
+          "visual_description": "FLASHBACK with slight sepia tint: Quick montage of the same young Asian man with GAMING HEADSET dying repeatedly in embarrassing ways - getting shot while running, missing every shot, panicking. His past self looks scared and uncertain. MOUTH CLOSED throughout flashback.",
+          "dialogue": "",
+        },
+        {
+          "sequence": 4,
+          "timestamp": "00:03-00:05",
+          "speaker": "A",
+          "camera": "Close-up on determined face with scope",
+          "movement": "slow zoom in",
+          "mood": "Determined, resolved",
+          "visual_description": "PRESENT: The gamer aims through his scope with steady hands and determined eyes. His face shows resolve and confidence - a stark contrast to his past self. His MOUTH OPENS TO SPEAK with quiet determination. The robot stands STILL and SILENT in background.",
+          "dialogue": "이번엔 다르다...",
+        }
+      ]
+    },
+    {
+      "scene_number": 2,
+      "scene_name": "명중률 87% + 커스텀 훈련장의 힘",
+      "duration": 6,
+
+      "scene_setting": {
+        "location": "Urban combat zone, ruined buildings, enemy position visible in distance.",
+        "lighting": "Clear daylight, dramatic shadows."
+      },
+
+      "camera_setup": {
+        "lens": "50mm",
+        "depth_of_field": "medium, tracking action",
+        "texture": "crisp action detail, tactical gear"
+      },
+
+      "mood_style": {
+        "genre": "Achievement and realization moment",
+        "color_tone": "Neutral daylight with warm victory tones"
+      },
+
+      "audio": {
+        "background": "Upbeat achievement music",
+        "fx": "Gunshot, body fall, victory pump sound"
+      },
+
+      "timeline": [
+        {
+          "sequence": 1,
+          "timestamp": "00:00-00:02",
+          "speaker": "B",
+          "camera": "Medium shot, robot in focus",
+          "movement": "static",
+          "mood": "Analytical, impressed",
+          "visual_description": "The mint-green cube robot with ChatGPT logo BOUNCES up and down as it SPEAKS, displaying stats gesture with its stubby arms. Its round black eyes BLINK. The gamer stands beside it, MOUTH CLOSED, looking surprised.",
+          "dialogue": "명중률 87%. 훈련장 효과가 실전에서 발휘되고 있습니다.",
+        },
+        {
+          "sequence": 2,
+          "timestamp": "00:02-00:03",
+          "speaker": "A",
+          "camera": "Close-up on shocked face",
+          "movement": "quick push in",
+          "mood": "Surprised, disbelief",
+          "visual_description": "The young Asian man with GAMING HEADSET's eyes widen in disbelief. His MOUTH OPENS in shock as he speaks. He can't believe he actually achieved such high accuracy. The robot stands STILL and SILENT beside him.",
+          "dialogue": "헉... 진짜 맞았어?!",
+        },
+        {
+          "sequence": 3,
+          "timestamp": "00:03-00:05",
+          "speaker": "A",
+          "camera": "Wide shot showing enemy falling, then medium on celebration",
+          "movement": "pan to falling enemy, then back to gamer",
+          "mood": "Triumphant realization",
+          "visual_description": "In the distance, an enemy character falls to the ground defeated. The young Asian man with GAMING HEADSET clenches his fist in victory, MOUTH OPEN speaking with excitement and realization. The robot stands STILL in background.",
+          "dialogue": "이게 바로 커스텀 훈련장의 힘이구나!",
+        },
+        {
+          "sequence": 4,
+          "timestamp": "00:05-00:06",
+          "speaker": "B",
+          "camera": "Close-up on robot",
+          "movement": "slight push in",
+          "mood": "Warning, cautionary",
+          "visual_description": "The mint-green cube robot with ChatGPT logo BOUNCES as it responds with a warning, raising one stubby arm. Its round black eyes BLINK rapidly. The gamer's celebration pauses, MOUTH SHUT, listening.",
+          "dialogue": "하지만 아직 1명 남았습니다.",
+        }
+      ]
+    },
+    {
+      "scene_number": 3,
+      "scene_name": "체력 부족 + 보급품 + 엔딩",
+      "duration": 8,
+
+      "scene_setting": {
+        "location": "Open grassy field with gentle hills. Blue sky with white clouds. Supply drop crate descending with parachute.",
+        "lighting": "Bright daylight, blue zone visible in distance, golden hour approaching."
+      },
+
+      "camera_setup": {
+        "lens": "24mm wide to 85mm telephoto",
+        "depth_of_field": "deep focus for environment, shallow for cliffhanger",
+        "texture": "lush grass, tactical gear detail, facial tension"
+      },
+
+      "mood_style": {
+        "genre": "Desperation to hope to cliffhanger",
+        "color_tone": "Vibrant greens and blues shifting to golden suspense"
+      },
+
+      "audio": {
+        "background": "Tense music building to suspenseful sustained note",
+        "fx": "Heavy breathing, wind through grass, parachute rustling, heartbeat"
+      },
+
+      "timeline": [
+        {
+          "sequence": 1,
+          "timestamp": "00:00-00:02",
+          "speaker": "A",
+          "camera": "Close-up on worried face",
+          "movement": "slight shake to convey urgency",
+          "mood": "Desperate, worried",
+          "visual_description": "In a grassy field, a young Asian man with GAMING HEADSET crouches low, looking exhausted and worried. He checks his body for wounds, face showing concern. His MOUTH OPENS TO SPEAK with panic. The mint-green cube robot stands nearby, completely STILL and SILENT.",
+          "dialogue": "으아 근데 체력이 얼마 안남았는데.. 구급상자 필요해",
+        },
+        {
+          "sequence": 2,
+          "timestamp": "00:02-00:04",
+          "speaker": "A",
+          "camera": "Medium shot on exhausted gamer",
+          "movement": "static",
+          "mood": "Exhausted hope",
+          "visual_description": "The young Asian man with GAMING HEADSET breathes heavily, sweat on his face. He looks battle-worn but determined. His MOUTH OPENS TO SPEAK with tired hope. The robot stands STILL in background.",
+          "dialogue": "헉헉 이제 1명만 잡으면 탈출 할 수 있어",
+        },
+        {
+          "sequence": 3,
+          "timestamp": "00:04-00:05",
+          "speaker": "B",
+          "camera": "Wide shot, tilt up to sky",
+          "movement": "pan from characters to descending supply crate",
+          "mood": "Exciting discovery",
+          "visual_description": "The mint-green cube robot with ChatGPT logo BOUNCES up and down as it SPEAKS, pointing one stubby arm toward the sky where a supply crate with red parachute descends slowly. Its round black eyes BLINK. The gamer looks up with MOUTH SHUT.",
+          "dialogue": "저기 보급품이 내려오는 것 같습니다.",
+        },
+        {
+          "sequence": 4,
+          "timestamp": "00:05-00:08",
+          "speaker": "None",
+          "camera": "Close-up on face, eyes darting between crate and horizon",
+          "movement": "slow zoom in on eyes",
+          "mood": "Suspenseful, cliffhanger",
+          "visual_description": "Close-up on the young Asian man with GAMING HEADSET. His eyes dart between the landed supply crate nearby and the distant hills where the last enemy might be hiding. His face shows internal conflict - go for the supplies or check for the enemy first? He crouches low in the grass, breathing steadily, MOUTH SLIGHTLY OPEN but SILENT. Sweat on his brow. The decision hangs in the air as golden light bathes the scene.",
+          "dialogue": "",
+        }
+      ]
+    }
+  ]
+}

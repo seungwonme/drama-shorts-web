@@ -1,0 +1,235 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": {
+        "face": "Young Asian male with neutral expression, clean-shaven, oval face shape",
+        "body_type": "Average build, athletic posture",
+        "hair": "Short black hair, neat cut",
+        "skin_tone": "Fair East Asian skin tone",
+        "distinguishing_feature": "WEARING LARGE GAMING HEADSET WITH MICROPHONE on head"
+      },
+      "clothing": "Black long-sleeve shirt, dark blue pants, black sneakers, fingerless gaming gloves",
+      "voice": "Energetic and emotional, easily panicked but determined, speaks casual Korean",
+      "speaking_visual": "mouth opens wide and speaks expressively"
+    },
+    {
+      "id": "C",
+      "name": "치크",
+      "gender": "neutral",
+      "age": "N/A",
+      "appearance": {
+        "face": "Cute round chick face with small black eyes and orange beak",
+        "body_type": "Small fluffy yellow chick body with tiny wings",
+        "hair": "Yellow fluffy feathers covering body",
+        "skin_tone": "Bright yellow feathers",
+        "distinguishing_feature": "SMALL YELLOW CHICK wearing DESERT CAMO MILITARY HELMET, orange beak and orange feet"
+      },
+      "clothing": "Desert camouflage military helmet only",
+      "voice": "Says only 'Peep' (subtitled in post-production)",
+      "speaking_visual": "BOUNCES up and down, FLAPS tiny wings"
+    }
+  ],
+  "scenes": [
+    {
+      "scene_number": 1,
+      "scene_name": "치크 등장 + 좌절",
+      "duration": 5,
+      "scene_setting": {
+        "location": "Open grassy field with blue sky. Supply crate landed nearby with red parachute.",
+        "lighting": "Bright daylight, clear visibility."
+      },
+      "camera_setup": {
+        "lens": "35mm",
+        "depth_of_field": "medium focus",
+        "texture": "lush grass, cute character detail"
+      },
+      "mood_style": {
+        "genre": "Comedic surprise to despair to hope",
+        "color_tone": "Vibrant greens and blues"
+      },
+      "audio": {
+        "background": "Comedic timing music",
+        "fx": "Chick chirps, dramatic despair sound"
+      },
+      "timeline": [
+        {
+          "sequence": 1,
+          "timestamp": "00:00-00:01",
+          "speaker": "C",
+          "camera": "Wide shot showing supply crate",
+          "movement": "quick pan to reveal chick",
+          "mood": "Comedic surprise",
+          "visual_description": "A small yellow chick wearing a desert camo military helmet suddenly POPS UP from behind the landed supply crate. The chick BOUNCES and TILTS its head curiously, FLAPPING tiny wings. The Gamer stands nearby, FROZEN in shock, MOUTH SHUT.",
+          "dialogue": "Peep?"
+        },
+        {
+          "sequence": 2,
+          "timestamp": "00:01-00:03",
+          "speaker": "A",
+          "camera": "Medium shot on Gamer's shocked face",
+          "movement": "static",
+          "mood": "Frustrated disbelief",
+          "visual_description": "The young Asian man with GAMING HEADSET stares in disbelief at the chick. His MOUTH OPENS WIDE as he SHOUTS in frustration. His arms gesture wildly at the chick. The small yellow chick with military helmet stands STILL, looking up at him innocently.",
+          "dialogue": "보급품이 아니라 병아리잖아!"
+        },
+        {
+          "sequence": 3,
+          "timestamp": "00:03-00:04",
+          "speaker": "A",
+          "camera": "Close-up on Gamer's face",
+          "movement": "slow zoom in",
+          "mood": "Utter despair",
+          "visual_description": "The young Asian man with GAMING HEADSET drops to his knees in despair. His MOUTH MOVES as he speaks with utter defeat. His face shows hopelessness. The chick watches from the side, STILL.",
+          "dialogue": "망했다 난 이제 평생 못나가겠네"
+        },
+        {
+          "sequence": 4,
+          "timestamp": "00:04-00:05",
+          "speaker": "C",
+          "camera": "Close-up on Cheek",
+          "movement": "slight push in",
+          "mood": "Encouraging determination",
+          "visual_description": "The small yellow chick with desert camo military helmet BOUNCES energetically and FLAPS its tiny wings with determination. It puffs up its chest confidently. The Gamer watches with MOUTH SHUT, confused but hopeful.",
+          "dialogue": "Peep!"
+        }
+      ]
+    },
+    {
+      "scene_number": 2,
+      "scene_name": "치크의 활약 + 수류탄 + 팀 제안",
+      "duration": 8,
+      "scene_setting": {
+        "location": "Dark warehouse interior with metal shelves, wooden crates, dim lighting. Enemies lurking.",
+        "lighting": "Dim industrial lighting, dramatic shadows."
+      },
+      "camera_setup": {
+        "lens": "24mm to 50mm",
+        "depth_of_field": "dynamic action focus",
+        "texture": "gritty warehouse, action detail"
+      },
+      "mood_style": {
+        "genre": "Action comedy to heroic moment to heartfelt",
+        "color_tone": "Dark industrial with action highlights"
+      },
+      "audio": {
+        "background": "Intense action music transitioning to heartfelt",
+        "fx": "Gunfire, chick chirps, grenade explosion, frying pan clang"
+      },
+      "timeline": [
+        {
+          "sequence": 1,
+          "timestamp": "00:00-00:02",
+          "speaker": "C",
+          "camera": "Dynamic action shots following Cheek",
+          "movement": "fast tracking shots",
+          "mood": "Intense action",
+          "visual_description": "Inside a dark warehouse, the small yellow chick with desert camo military helmet moves like a trained soldier. It DASHES between cover, JUMPS over obstacles, and takes down enemies with surprising skill. The chick BOUNCES rapidly as it chirps battle cries.",
+          "dialogue": "Peep! Peep!"
+        },
+        {
+          "sequence": 2,
+          "timestamp": "00:02-00:03",
+          "speaker": "A",
+          "camera": "Medium shot on Gamer",
+          "movement": "static with shake",
+          "mood": "Amazed disbelief",
+          "visual_description": "The young Asian man with GAMING HEADSET watches in complete amazement. His jaw drops, MOUTH OPEN as he speaks with disbelief. His eyes follow the chick's incredible movements. The chick continues fighting in the background, STILL for this shot.",
+          "dialogue": "와 아니 어떻게 병아리가..."
+        },
+        {
+          "sequence": 3,
+          "timestamp": "00:03-00:04",
+          "speaker": "A",
+          "camera": "Wide shot showing incoming grenade",
+          "movement": "quick pan to grenade",
+          "mood": "Sudden danger",
+          "visual_description": "A grenade flies through the air toward them. The young Asian man with GAMING HEADSET spots it, eyes wide with terror. His MOUTH OPENS as he SCREAMS a warning. The chick looks at the incoming threat, STILL.",
+          "dialogue": "아 위험해!"
+        },
+        {
+          "sequence": 4,
+          "timestamp": "00:04-00:06",
+          "speaker": "None",
+          "camera": "Slow motion action shot",
+          "movement": "dramatic slow motion",
+          "mood": "Heroic moment",
+          "visual_description": "The young Asian man with GAMING HEADSET pulls out a frying pan and SWINGS it at the grenade, deflecting it away in a heroic slow-motion moment. His face shows intense concentration, MOUTH SHUT. The grenade explodes harmlessly in the distance. Smoke billows. Both characters emerge unharmed as smoke clears.",
+          "dialogue": ""
+        },
+        {
+          "sequence": 5,
+          "timestamp": "00:06-00:08",
+          "speaker": "C",
+          "camera": "Two shot of Cheek and Gamer",
+          "movement": "slow push in",
+          "mood": "Grateful, heartfelt",
+          "visual_description": "The smoke clears revealing both safe. The small yellow chick with desert camo military helmet looks up at the Gamer with gratitude. It BOUNCES happily and FLAPS wings joyfully. The Gamer watches with MOUTH SHUT, touched by the moment.",
+          "dialogue": "Peep Peep!"
+        }
+      ]
+    },
+    {
+      "scene_number": 3,
+      "scene_name": "PWS 제안 + CTA",
+      "duration": 5,
+      "scene_setting": {
+        "location": "Warehouse interior with golden light streaming in, then transition to clean CTA background.",
+        "lighting": "Golden hour light transitioning to bright CTA lighting."
+      },
+      "camera_setup": {
+        "lens": "50mm to 35mm",
+        "depth_of_field": "shallow emotional focus",
+        "texture": "warm character detail"
+      },
+      "mood_style": {
+        "genre": "Hesitation to encouragement to call-to-action",
+        "color_tone": "Warm golden transitioning to bright hopeful"
+      },
+      "audio": {
+        "background": "Hopeful uplifting music",
+        "fx": "Phone notification sound, triumphant finale"
+      },
+      "timeline": [
+        {
+          "sequence": 1,
+          "timestamp": "00:00-00:02",
+          "speaker": "A",
+          "camera": "Close-up on Gamer",
+          "movement": "slight handheld",
+          "mood": "Hesitant, uncertain",
+          "visual_description": "The young Asian man with GAMING HEADSET looks touched but uncertain. His MOUTH OPENS as he speaks with hesitation, rubbing the back of his head nervously. The chick watches him attentively, STILL.",
+          "dialogue": "앗..! 하지만 난 사실.. 아마추어인걸..!"
+        },
+        {
+          "sequence": 2,
+          "timestamp": "00:02-00:03",
+          "speaker": "C",
+          "camera": "Close-up on Cheek holding phone",
+          "movement": "push in on phone screen",
+          "mood": "Encouraging solution",
+          "visual_description": "The small yellow chick with desert camo military helmet holds up a smartphone in its tiny wing. The screen shows a PWS registration form. The chick BOUNCES encouragingly. The Gamer looks at the phone with MOUTH SHUT, surprised and hopeful.",
+          "dialogue": "Peep!"
+        },
+        {
+          "sequence": 3,
+          "timestamp": "00:03-00:05",
+          "speaker": "None",
+          "camera": "Wide shot, both characters face camera",
+          "movement": "slow zoom out to reveal both",
+          "mood": "Triumphant CTA",
+          "visual_description": "The young Asian man with GAMING HEADSET and the small yellow chick with military helmet stand together facing the camera. The Gamer gives a thumbs up with a determined smile, MOUTH SHUT. The chick BOUNCES beside him holding the phone high. Golden light bathes the scene heroically.",
+          "dialogue": ""
+        }
+      ]
+    }
+  ]
+}

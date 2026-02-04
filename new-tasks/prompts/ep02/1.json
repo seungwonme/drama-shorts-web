@@ -1,0 +1,109 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": {
+        "face": "Young Asian male with neutral expression, clean-shaven, oval face shape",
+        "body_type": "Average build, athletic posture",
+        "hair": "Short black hair, neat cut",
+        "skin_tone": "Fair East Asian skin tone",
+        "distinguishing_feature": "WEARING LARGE GAMING HEADSET WITH MICROPHONE on head"
+      },
+      "clothing": "Black long-sleeve shirt, dark blue pants, black sneakers, fingerless gaming gloves",
+      "voice": "Energetic and emotional, easily panicked but determined, speaks casual Korean",
+      "speaking_visual": "mouth opens wide and speaks expressively"
+    },
+    {
+      "id": "B",
+      "name": "GPT",
+      "gender": "neutral",
+      "age": "N/A",
+      "appearance": {
+        "face": "Simple cute face with two round black eyes on cube-shaped head",
+        "body_type": "Small mint-green humanoid robot with cube body, stubby arms and legs",
+        "hair": "None",
+        "skin_tone": "Mint green with soft matte texture",
+        "distinguishing_feature": "MINT-GREEN CUBE ROBOT with WHITE CHATGPT LOGO on chest and TWO ROUND BLACK EYES"
+      },
+      "clothing": "None - robot body",
+      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다",
+      "speaking_visual": "entire body BOUNCES up and down rhythmically, eyes BLINK rapidly"
+    }
+  ],
+  "scene": {
+    "scene_number": 1,
+    "scene_name": "맞저격 + 회상",
+    "duration": 5,
+    "scene_setting": {
+      "location": "Post-apocalyptic urban street. Destroyed concrete buildings, broken windows, rubble.",
+      "lighting": "Harsh daylight, high contrast shadows from ruined buildings."
+    },
+    "camera_setup": {
+      "lens": "85mm",
+      "depth_of_field": "shallow, dramatic focus",
+      "texture": "sharp detail on action, muzzle flash effects"
+    },
+    "mood_style": {
+      "genre": "Action triumph with nostalgic flashback",
+      "color_tone": "Grey urban tones with muzzle flash highlights"
+    },
+    "audio": {
+      "background": "Tense music swelling to triumphant note",
+      "fx": "Sniper rifle shot, shell casing, echoed flashback gunshots"
+    },
+    "timeline": [
+      {
+        "sequence": 1,
+        "timestamp": "00:00-00:01",
+        "speaker": "A",
+        "camera": "Over shoulder shot, POV scope view",
+        "movement": "quick zoom in on target",
+        "mood": "Confident, bravado",
+        "visual_description": "A young Asian man with GAMING HEADSET and black long-sleeve shirt crouches behind cover, holding a sniper rifle. He aims through the scope and fires confidently. The shot hits the distant enemy instantly. He smirks with satisfaction, his MOUTH OPENS TO SPEAK with bravado. The mint-green cube robot stands beside him, completely STILL and SILENT.",
+        "dialogue": "남자는 맞저격이지.",
+        "negative_prompt": "missing shot, scared expression, robot moving"
+      },
+      {
+        "sequence": 2,
+        "timestamp": "00:01-00:02",
+        "speaker": "B",
+        "camera": "Medium shot on robot",
+        "movement": "slight push in",
+        "mood": "Impressed, analytical",
+        "visual_description": "The mint-green cube robot with ChatGPT logo BOUNCES up and down as it SPEAKS, round black eyes BLINKING with approval. The gamer stands confidently beside it, MOUTH CLOSED, nodding.",
+        "dialogue": "에임 연습의 효과가 대단합니다.",
+        "negative_prompt": "static robot, human speaking"
+      },
+      {
+        "sequence": 3,
+        "timestamp": "00:02-00:03",
+        "speaker": "None",
+        "camera": "Split screen flashback effect",
+        "movement": "slow motion for flashback",
+        "mood": "Nostalgic, contrast",
+        "visual_description": "FLASHBACK with slight sepia tint: Quick montage of the same young Asian man with GAMING HEADSET dying repeatedly in embarrassing ways - getting shot while running, missing every shot, panicking. His past self looks scared and uncertain. MOUTH CLOSED throughout flashback.",
+        "dialogue": "",
+        "negative_prompt": "successful shots, confident expression"
+      },
+      {
+        "sequence": 4,
+        "timestamp": "00:03-00:05",
+        "speaker": "A",
+        "camera": "Close-up on determined face with scope",
+        "movement": "slow zoom in",
+        "mood": "Determined, resolved",
+        "visual_description": "PRESENT: The gamer aims through his scope with steady hands and determined eyes. His face shows resolve and confidence - a stark contrast to his past self. His MOUTH OPENS TO SPEAK with quiet determination. The robot stands STILL and SILENT in background.",
+        "dialogue": "이번엔 다르다...",
+        "negative_prompt": "shaky hands, scared, robot moving"
+      }
+    ]
+  }
+}

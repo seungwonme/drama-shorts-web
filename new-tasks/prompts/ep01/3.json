@@ -10,83 +10,77 @@
       "name": "게이머",
       "gender": "male",
       "age": "early 20s",
-      "appearance": "Young Asian male, average build, expressive face. Short black hair, wearing a gaming headset on head.",
-      "clothing": "Black long-sleeve shirt, dark blue jeans. Casual gamer look.",
-      "voice": "Energetic and emotional, easily panicked but determined."
+      "appearance": {
+        "face": "Young Asian male with neutral expression, clean-shaven, oval face shape",
+        "body_type": "Average build, athletic posture",
+        "hair": "Short black hair, neat cut",
+        "skin_tone": "Fair East Asian skin tone",
+        "distinguishing_feature": "WEARING LARGE GAMING HEADSET WITH MICROPHONE on head"
+      },
+      "clothing": "Black long-sleeve shirt, dark blue pants, black sneakers, fingerless gaming gloves",
+      "voice": "Energetic and emotional, easily panicked but determined, speaks casual Korean",
+      "speaking_visual": "mouth opens wide and speaks expressively"
     },
     {
       "id": "B",
       "name": "GPT",
-      "gender": "male",
-      "age": "unknown",
-      "appearance": "PUBG character with level 3 military helmet completely covering face. Tactical and robotic posture.",
-      "clothing": "White dress shirt, dark jeans, tactical belt with holstered pistol.",
-      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다."
+      "gender": "neutral",
+      "age": "N/A",
+      "appearance": {
+        "face": "Simple cute face with two round black eyes on cube-shaped head",
+        "body_type": "Small mint-green humanoid robot with cube body, stubby arms and legs",
+        "hair": "None",
+        "skin_tone": "Mint green with soft matte texture",
+        "distinguishing_feature": "MINT-GREEN CUBE ROBOT with WHITE CHATGPT LOGO on chest and TWO ROUND BLACK EYES"
+      },
+      "clothing": "None - robot body",
+      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다",
+      "speaking_visual": "entire body BOUNCES up and down rhythmically, eyes BLINK rapidly"
     }
   ],
   "scene": {
     "scene_number": 3,
-    "scene_name": "성장",
+    "scene_name": "위기 + 마무리",
     "duration": 5,
     "scene_setting": {
-      "location": "Urban combat area with concrete barriers, damaged walls for cover positions.",
-      "lighting": "Daylight with slightly dramatic shadows from buildings."
+      "location": "Open urban street with long sight lines, behind concrete barrier for cover.",
+      "lighting": "Harsh daylight, high contrast shadows."
     },
     "camera_setup": {
-      "lens": "50mm",
-      "depth_of_field": "medium, action-tracking",
-      "texture": "dynamic motion, tactical gear detail"
+      "lens": "85mm",
+      "depth_of_field": "shallow for dramatic effect",
+      "texture": "sharp detail on facial reaction, sweat, tension"
     },
     "mood_style": {
-      "genre": "Training montage, action progression",
-      "color_tone": "Neutral daylight with dramatic contrast"
+      "genre": "Sudden danger to cliffhanger",
+      "color_tone": "High contrast, harsh whites and deep shadows"
     },
     "audio": {
-      "background": "Upbeat training montage music",
-      "fx": "gunfire, reload sounds, footsteps, shell casings"
+      "background": "Sudden silence, then tense sustained note, heartbeat",
+      "fx": "Sniper shot crack, bullet whiz, heavy breathing"
     },
     "timeline": [
       {
         "sequence": 1,
-        "timestamp": "00:08-00:11",
-        "camera": "[Over shoulder shot on A]",
-        "movement": "tracking A's movement",
-        "focus": "A aiming rifle",
-        "mood": "Focused, improving",
-        "sfx": "gunfire, reload",
-        "A": {
-          "action": "Behind cover, pops up, aims rifle at targets. Fires controlled bursts. Moves tactically to next cover.",
-          "dialogue": "맨날 벽만 쏘다가, 진짜 실전 같이 쏘니까 실력이 느는 것 같은데?",
-          "emotion": "Focused, gaining confidence",
-          "position": "moving between cover positions"
-        },
-        "B": {
-          "action": "Standing nearby, watching and nodding approvingly.",
-          "dialogue": "",
-          "emotion": "Satisfied",
-          "position": "background, observing"
-        }
+        "timestamp": "00:00-00:02",
+        "speaker": "A",
+        "camera": "Wide shot then quick zoom to close-up on shocked face",
+        "movement": "quick pan following bullet impact",
+        "mood": "Shocked, urgent",
+        "visual_description": "The young Asian man with GAMING HEADSET stands in an open street. A bullet suddenly whizzes past, hitting the ground near his feet. He flinches violently, eyes wide with terror, and his MOUTH OPENS WIDE TO SCREAM as he dives desperately toward a concrete barrier for cover.",
+        "dialogue": "으악! 빨리 숨어야해, 어디로 숨지?",
+        "negative_prompt": "calm, relaxed, standing still"
       },
       {
         "sequence": 2,
-        "timestamp": "00:11-00:13",
-        "camera": "[Side profile of A]",
-        "movement": "tracking",
-        "focus": "A's improved movements",
-        "mood": "Confident",
-        "sfx": "precise gunfire",
-        "A": {
-          "action": "Movements become more fluid and skilled. Takes down multiple targets with precision.",
-          "dialogue": "",
-          "emotion": "Confident",
-          "position": "center of action"
-        },
-        "B": {
-          "action": "Gestures approval.",
-          "dialogue": "그래도 방심은 금물입니다.",
-          "emotion": "Cautionary",
-          "position": "to the side"
-        }
+        "timestamp": "00:02-00:05",
+        "speaker": "None",
+        "camera": "Close-up on face behind cover",
+        "movement": "slow zoom in on eyes",
+        "mood": "Suspenseful, cliffhanger",
+        "visual_description": "Close-up on the young Asian man with GAMING HEADSET crouched behind a concrete barrier. He breathes heavily, MOUTH SLIGHTLY OPEN but SILENT, sweat on his forehead. He peeks out cautiously to assess where the sniper is. His expression slowly shifts from fear to determination as he weighs his options - counter-snipe or stay down? The decision hangs in the air.",
+        "dialogue": "",
+        "negative_prompt": "talking, speaking, relaxed expression, decided"
       }
     ]
   }

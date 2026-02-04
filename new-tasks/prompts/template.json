@@ -1,4 +1,10 @@
 {
+  "_guide": {
+    "scene_rules": "각 scene은 독립적인 영상으로 생성됨. duration은 최대 8초. timestamp는 해당 scene 내에서의 시간(항상 00:00부터 시작).",
+    "total_duration": "전체 에피소드 길이는 scenes의 duration 합계",
+    "speaker_rule": "한 시퀀스에 한 명만 말함. 화자가 말할 때 비화자는 STILL/SILENT/MOUTH SHUT."
+  },
+
   "product": {
     "name": "[제품/서비스명]",
     "description": "[영문 설명 - AI 영상 생성용]",
@@ -9,20 +15,34 @@
     {
       "id": "A",
       "name": "[캐릭터 한글명]",
-      "gender": "[male/female]",
-      "age": "[early 20s, late 30s 등]",
-      "appearance": "[영문] 외형 묘사 - 얼굴, 체형, 헤어스타일 등",
+      "gender": "[male/female/neutral]",
+      "age": "[early 20s, late 30s, N/A 등]",
+      "appearance": {
+        "face": "[영문] 얼굴 특징 - 얼굴형, 눈, 코, 입 등",
+        "body_type": "[영문] 체형 - tall, average, slim, muscular 등",
+        "hair": "[영문] 헤어스타일 - 길이, 색상, 스타일",
+        "skin_tone": "[영문] 피부톤 - fair, tan, dark 등",
+        "distinguishing_feature": "[영문] 핵심 구별 특징 - 다른 캐릭터와 확실히 구분되는 특징 (대문자 강조)"
+      },
       "clothing": "[영문] 의상 묘사 - 상의, 하의, 액세서리 등",
-      "voice": "[영문] 목소리/말투 특징"
+      "voice": "[영문] 목소리/말투 특징",
+      "speaking_visual": "[영문] 이 캐릭터가 말할 때의 시각적 표현. 예: mouth opens wide and speaks / BOUNCES up and down, FLAPS wings (입이 없는 캐릭터용)"
     },
     {
       "id": "B",
       "name": "[캐릭터 한글명]",
-      "gender": "[male/female]",
+      "gender": "[male/female/neutral]",
       "age": "[연령대]",
-      "appearance": "[영문] 외형 묘사",
+      "appearance": {
+        "face": "[영문] 얼굴 특징",
+        "body_type": "[영문] 체형",
+        "hair": "[영문] 헤어스타일",
+        "skin_tone": "[영문] 피부톤",
+        "distinguishing_feature": "[영문] 핵심 구별 특징 - A와 확실히 다른 특징 (대문자 강조)"
+      },
       "clothing": "[영문] 의상 묘사",
-      "voice": "[영문] 목소리/말투 특징"
+      "voice": "[영문] 목소리/말투 특징",
+      "speaking_visual": "[영문] 말할 때의 시각적 표현"
     }
   ],
 
@@ -30,7 +50,7 @@
     {
       "scene_number": 1,
       "scene_name": "[씬 한글명 - 훅, 전개, 위기 등]",
-      "duration": 5,
+      "duration": 8,
 
       "scene_setting": {
         "location": "[영문] 장소 상세 묘사 - 배경, 사물, 분위기 등",
@@ -49,102 +69,30 @@
       },
 
       "audio": {
-        "background": "[영문] 배경음/음악 설명 (후편집 참고용)",
-        "fx": "[영문] 효과음 설명 (후편집 참고용)"
+        "background": "[영문] 배경음/음악 설명",
+        "fx": "[영문] 효과음 설명"
       },
 
       "timeline": [
         {
           "sequence": 1,
-          "timestamp": "00:00-00:02",
-          "camera": "[카메라 앵글 - CU, MS, Wide 등]",
+          "timestamp": "00:00-00:03",
+          "speaker": "[A/B/C/None] - 이 시퀀스에서 말하는 캐릭터 (한 명만). 둘 다 침묵이면 None",
+          "camera": "[카메라 앵글] - 화자 중심으로 설정. 예: Close-up on A",
           "movement": "[카메라 움직임 - static, tracking, pan, zoom 등]",
-          "focus": "[영문] 초점 대상",
           "mood": "[영문] 시퀀스 분위기",
-          "sfx": "[영문] 해당 시퀀스 효과음",
-          "A": {
-            "action": "[영문] 캐릭터 A의 행동 묘사",
-            "dialogue": "[한글] 대사 (후편집 자막용, 영상에는 미포함)",
-            "emotion": "[영문] 감정 상태 - 단일 감정만",
-            "position": "[영문] 프레임 내 위치 - left, center, right 등"
-          },
-          "B": {
-            "action": "[영문] 캐릭터 B의 행동 묘사 (없으면 빈 문자열)",
-            "dialogue": "[한글] 대사",
-            "emotion": "[영문] 감정 상태",
-            "position": "[영문] 프레임 내 위치 또는 'not in scene'"
-          }
+          "visual_description": "[영문] 전체 장면 묘사. (1) 캐릭터 외형을 매번 풀어서 작성. (2) 화자: MOUTH OPENS TO SPEAK 또는 speaking_visual 적용. (3) 비화자: STILL, SILENT, MOUTH SHUT 명시.",
+          "dialogue": "[한글] 화자의 대사. 침묵이면 빈 문자열"
         },
         {
           "sequence": 2,
-          "timestamp": "00:02-00:05",
-          "camera": "[카메라 앵글]",
+          "timestamp": "00:03-00:08",
+          "speaker": "[A/B/C/None]",
+          "camera": "[화자 중심 카메라 앵글]",
           "movement": "[카메라 움직임]",
-          "focus": "[초점 대상]",
           "mood": "[시퀀스 분위기]",
-          "sfx": "[효과음]",
-          "A": {
-            "action": "[행동 묘사]",
-            "dialogue": "[대사]",
-            "emotion": "[감정]",
-            "position": "[위치]"
-          },
-          "B": {
-            "action": "[행동 묘사]",
-            "dialogue": "[대사]",
-            "emotion": "[감정]",
-            "position": "[위치]"
-          }
-        }
-      ]
-    },
-    {
-      "scene_number": 2,
-      "scene_name": "[씬 한글명]",
-      "duration": 3,
-
-      "scene_setting": {
-        "location": "[장소 묘사]",
-        "lighting": "[조명 묘사]"
-      },
-
-      "camera_setup": {
-        "lens": "[초점거리]",
-        "depth_of_field": "[피사계 심도]",
-        "texture": "[텍스처]"
-      },
-
-      "mood_style": {
-        "genre": "[장르]",
-        "color_tone": "[색감]"
-      },
-
-      "audio": {
-        "background": "[배경음]",
-        "fx": "[효과음]"
-      },
-
-      "timeline": [
-        {
-          "sequence": 1,
-          "timestamp": "[시작-종료]",
-          "camera": "[앵글]",
-          "movement": "[움직임]",
-          "focus": "[초점]",
-          "mood": "[분위기]",
-          "sfx": "[효과음]",
-          "A": {
-            "action": "[행동]",
-            "dialogue": "[대사]",
-            "emotion": "[감정]",
-            "position": "[위치]"
-          },
-          "B": {
-            "action": "[행동]",
-            "dialogue": "[대사]",
-            "emotion": "[감정]",
-            "position": "[위치]"
-          }
+          "visual_description": "[장면 묘사 - 화자/비화자 명확히 구분]",
+          "dialogue": "[대사]"
         }
       ]
     }

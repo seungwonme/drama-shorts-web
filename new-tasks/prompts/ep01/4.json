@@ -10,62 +10,77 @@
       "name": "게이머",
       "gender": "male",
       "age": "early 20s",
-      "appearance": "Young Asian male, average build, expressive face. Short black hair, wearing a gaming headset on head.",
-      "clothing": "Black long-sleeve shirt, dark blue jeans. Casual gamer look.",
-      "voice": "Energetic and emotional, easily panicked but determined."
+      "appearance": {
+        "face": "Young Asian male with neutral expression, clean-shaven, oval face shape",
+        "body_type": "Average build, athletic posture",
+        "hair": "Short black hair, neat cut",
+        "skin_tone": "Fair East Asian skin tone",
+        "distinguishing_feature": "WEARING LARGE GAMING HEADSET WITH MICROPHONE on head"
+      },
+      "clothing": "Black long-sleeve shirt, dark blue pants, black sneakers, fingerless gaming gloves",
+      "voice": "Energetic and emotional, easily panicked but determined, speaks casual Korean",
+      "speaking_visual": "mouth opens wide and speaks expressively"
     },
     {
       "id": "B",
       "name": "GPT",
-      "gender": "male",
-      "age": "unknown",
-      "appearance": "PUBG character with level 3 military helmet completely covering face. Tactical and robotic posture.",
-      "clothing": "White dress shirt, dark jeans, tactical belt with holstered pistol.",
-      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다."
+      "gender": "neutral",
+      "age": "N/A",
+      "appearance": {
+        "face": "Simple cute face with two round black eyes on cube-shaped head",
+        "body_type": "Small mint-green humanoid robot with cube body, stubby arms and legs",
+        "hair": "None",
+        "skin_tone": "Mint green with soft matte texture",
+        "distinguishing_feature": "MINT-GREEN CUBE ROBOT with WHITE CHATGPT LOGO on chest and TWO ROUND BLACK EYES"
+      },
+      "clothing": "None - robot body",
+      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다",
+      "speaking_visual": "entire body BOUNCES up and down rhythmically, eyes BLINK rapidly"
     }
   ],
   "scene": {
     "scene_number": 4,
-    "scene_name": "위기",
-    "duration": 2,
+    "scene_name": "위기 + 마무리",
+    "duration": 5,
     "scene_setting": {
-      "location": "Open street with long sightlines, exposed position with no nearby cover.",
-      "lighting": "Harsh daylight, high contrast shadows."
+      "location": "Open street transitioning to behind concrete barrier, tense battlefield atmosphere.",
+      "lighting": "Harsh daylight with high contrast shadows, dramatic lighting on face."
     },
     "camera_setup": {
       "lens": "85mm",
       "depth_of_field": "shallow for dramatic effect",
-      "texture": "sharp detail on A's reaction"
+      "texture": "sharp detail on facial reaction, sweat, tension"
     },
     "mood_style": {
-      "genre": "Sudden danger, survival tension",
-      "color_tone": "High contrast, harsh whites and deep shadows"
+      "genre": "Sudden danger to cliffhanger decision",
+      "color_tone": "High contrast, harsh whites and moody shadows"
     },
     "audio": {
-      "background": "Sudden silence before impact",
-      "fx": "sniper shot crack, bullet whiz, impact sound"
+      "background": "Sudden silence, then heartbeat sound and tense sustained note",
+      "fx": "Sniper shot crack, bullet whiz, heavy breathing, distant gunfire"
     },
     "timeline": [
       {
         "sequence": 1,
-        "timestamp": "00:13-00:15",
-        "camera": "[Quick cuts: Wide to CU on A]",
+        "timestamp": "00:00-00:02",
+        "speaker": "A",
+        "camera": "Quick cuts: Wide to close-up on human gamer's face",
         "movement": "quick pan following bullet impact",
-        "focus": "A's shocked reaction",
         "mood": "Tense, urgent",
-        "sfx": "sniper shot, bullet whiz, impact",
-        "A": {
-          "action": "Standing in open. Suddenly flinches as bullet hits nearby. Dives to the ground in panic, scrambling for any cover.",
-          "dialogue": "으악! 빨리 숨어야해, 어디로 숨지?",
-          "emotion": "Shocked, scared",
-          "position": "center, diving for cover"
-        },
-        "B": {
-          "action": "",
-          "dialogue": "",
-          "emotion": "",
-          "position": "not in scene"
-        }
+        "visual_description": "A young Asian man with GAMING HEADSET and black shirt stands exposed in an open street. A bullet suddenly whizzes past, hitting the ground nearby. He flinches violently, eyes wide with shock, and OPENS MOUTH WIDE TO SCREAM as he dives to the ground in panic, scrambling desperately for any cover.",
+        "dialogue": "으악! 빨리 숨어야해, 어디로 숨지?",
+        "negative_prompt": "calm, relaxed, standing still"
+      },
+      {
+        "sequence": 2,
+        "timestamp": "00:02-00:05",
+        "speaker": "None",
+        "camera": "Close-up on face",
+        "movement": "slow zoom in",
+        "mood": "Suspenseful, cliffhanger",
+        "visual_description": "Close-up on the young Asian man with GAMING HEADSET crouched behind a concrete barrier. He breathes heavily with MOUTH SLIGHTLY OPEN but SILENT, sweat on his forehead. He peeks out cautiously to assess the threat. His expression slowly shifts from fear to determination as he makes a decision. The headset microphone is visible near his mouth.",
+        "dialogue": "",
+        "negative_prompt": "talking, speaking, relaxed expression"
       }
     ]
   }

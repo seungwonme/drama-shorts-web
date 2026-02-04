@@ -1,0 +1,109 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": {
+        "face": "Young Asian male with neutral expression, clean-shaven, oval face shape",
+        "body_type": "Average build, athletic posture",
+        "hair": "Short black hair, neat cut",
+        "skin_tone": "Fair East Asian skin tone",
+        "distinguishing_feature": "WEARING LARGE GAMING HEADSET WITH MICROPHONE on head"
+      },
+      "clothing": "Black long-sleeve shirt, dark blue pants, black sneakers, fingerless gaming gloves",
+      "voice": "Energetic and emotional, easily panicked but determined, speaks casual Korean",
+      "speaking_visual": "mouth opens wide and speaks expressively"
+    },
+    {
+      "id": "B",
+      "name": "GPT",
+      "gender": "neutral",
+      "age": "N/A",
+      "appearance": {
+        "face": "Simple cute face with two round black eyes on cube-shaped head",
+        "body_type": "Small mint-green humanoid robot with cube body, stubby arms and legs",
+        "hair": "None",
+        "skin_tone": "Mint green with soft matte texture",
+        "distinguishing_feature": "MINT-GREEN CUBE ROBOT with WHITE CHATGPT LOGO on chest and TWO ROUND BLACK EYES"
+      },
+      "clothing": "None - robot body",
+      "voice": "Calm, robotic, speaks in formal Korean ending with ~합니다",
+      "speaking_visual": "entire body BOUNCES up and down rhythmically, eyes BLINK rapidly"
+    }
+  ],
+  "scene": {
+    "scene_number": 2,
+    "scene_name": "명중률 87% + 커스텀 훈련장의 힘",
+    "duration": 6,
+    "scene_setting": {
+      "location": "Urban combat zone, ruined buildings, enemy position visible in distance.",
+      "lighting": "Clear daylight, dramatic shadows."
+    },
+    "camera_setup": {
+      "lens": "50mm",
+      "depth_of_field": "medium, tracking action",
+      "texture": "crisp action detail, tactical gear"
+    },
+    "mood_style": {
+      "genre": "Achievement and realization moment",
+      "color_tone": "Neutral daylight with warm victory tones"
+    },
+    "audio": {
+      "background": "Upbeat achievement music",
+      "fx": "Gunshot, body fall, victory pump sound"
+    },
+    "timeline": [
+      {
+        "sequence": 1,
+        "timestamp": "00:00-00:02",
+        "speaker": "B",
+        "camera": "Medium shot, robot in focus",
+        "movement": "static",
+        "mood": "Analytical, impressed",
+        "visual_description": "The mint-green cube robot with ChatGPT logo BOUNCES up and down as it SPEAKS, displaying stats gesture with its stubby arms. Its round black eyes BLINK. The gamer stands beside it, MOUTH CLOSED, looking surprised.",
+        "dialogue": "명중률 87%. 훈련장 효과가 실전에서 발휘되고 있습니다.",
+        "negative_prompt": "static robot, human speaking"
+      },
+      {
+        "sequence": 2,
+        "timestamp": "00:02-00:03",
+        "speaker": "A",
+        "camera": "Close-up on shocked face",
+        "movement": "quick push in",
+        "mood": "Surprised, disbelief",
+        "visual_description": "The young Asian man with GAMING HEADSET's eyes widen in disbelief. His MOUTH OPENS in shock as he speaks. He can't believe he actually achieved such high accuracy. The robot stands STILL and SILENT beside him.",
+        "dialogue": "헉... 진짜 맞았어?!",
+        "negative_prompt": "calm reaction, robot moving"
+      },
+      {
+        "sequence": 3,
+        "timestamp": "00:03-00:05",
+        "speaker": "A",
+        "camera": "Wide shot showing enemy falling, then medium on celebration",
+        "movement": "pan to falling enemy, then back to gamer",
+        "mood": "Triumphant realization",
+        "visual_description": "In the distance, an enemy character falls to the ground defeated. The young Asian man with GAMING HEADSET clenches his fist in victory, MOUTH OPEN speaking with excitement and realization. The robot stands STILL in background.",
+        "dialogue": "이게 바로 커스텀 훈련장의 힘이구나!",
+        "negative_prompt": "enemy standing, sad expression, robot moving"
+      },
+      {
+        "sequence": 4,
+        "timestamp": "00:05-00:06",
+        "speaker": "B",
+        "camera": "Close-up on robot",
+        "movement": "slight push in",
+        "mood": "Warning, cautionary",
+        "visual_description": "The mint-green cube robot with ChatGPT logo BOUNCES as it responds with a warning, raising one stubby arm. Its round black eyes BLINK rapidly. The gamer's celebration pauses, MOUTH SHUT, listening.",
+        "dialogue": "하지만 아직 1명 남았습니다.",
+        "negative_prompt": "static robot, human speaking"
+      }
+    ]
+  }
+}

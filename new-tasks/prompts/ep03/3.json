@@ -1,0 +1,95 @@
+{
+  "product": {
+    "name": "크래프톤 배틀그라운드 대회 (PWS)",
+    "description": "The official PUBG battle royale tournament for both professionals and amateurs to prove their skills.",
+    "key_benefit": "Amateurs can participate and win with the right team roles and routine."
+  },
+  "characters": [
+    {
+      "id": "A",
+      "name": "게이머",
+      "gender": "male",
+      "age": "early 20s",
+      "appearance": {
+        "face": "Young Asian male with neutral expression, clean-shaven, oval face shape",
+        "body_type": "Average build, athletic posture",
+        "hair": "Short black hair, neat cut",
+        "skin_tone": "Fair East Asian skin tone",
+        "distinguishing_feature": "WEARING LARGE GAMING HEADSET WITH MICROPHONE on head"
+      },
+      "clothing": "Black long-sleeve shirt, dark blue pants, black sneakers, fingerless gaming gloves",
+      "voice": "Energetic and emotional, easily panicked but determined, speaks casual Korean",
+      "speaking_visual": "mouth opens wide and speaks expressively"
+    },
+    {
+      "id": "C",
+      "name": "치크",
+      "gender": "neutral",
+      "age": "N/A",
+      "appearance": {
+        "face": "Cute round chick face with small black eyes and orange beak",
+        "body_type": "Small fluffy yellow chick body with tiny wings",
+        "hair": "Yellow fluffy feathers covering body",
+        "skin_tone": "Bright yellow feathers",
+        "distinguishing_feature": "SMALL YELLOW CHICK wearing DESERT CAMO MILITARY HELMET, orange beak and orange feet"
+      },
+      "clothing": "Desert camouflage military helmet only",
+      "voice": "Says only 'Peep' (subtitled in post-production)",
+      "speaking_visual": "BOUNCES up and down, FLAPS tiny wings"
+    }
+  ],
+  "scene": {
+    "scene_number": 3,
+    "scene_name": "PWS 제안 + CTA",
+    "duration": 5,
+    "scene_setting": {
+      "location": "Warehouse interior with golden light streaming in, then transition to clean CTA background.",
+      "lighting": "Golden hour light transitioning to bright CTA lighting."
+    },
+    "camera_setup": {
+      "lens": "50mm to 35mm",
+      "depth_of_field": "shallow emotional focus",
+      "texture": "warm character detail"
+    },
+    "mood_style": {
+      "genre": "Hesitation to encouragement to call-to-action",
+      "color_tone": "Warm golden transitioning to bright hopeful"
+    },
+    "audio": {
+      "background": "Hopeful uplifting music",
+      "fx": "Phone notification sound, triumphant finale"
+    },
+    "timeline": [
+      {
+        "sequence": 1,
+        "timestamp": "00:00-00:02",
+        "speaker": "A",
+        "camera": "Close-up on Gamer",
+        "movement": "slight handheld",
+        "mood": "Hesitant, uncertain",
+        "visual_description": "The young Asian man with GAMING HEADSET looks touched but uncertain. His MOUTH OPENS as he speaks with hesitation, rubbing the back of his head nervously. The chick watches him attentively, STILL.",
+        "dialogue": "앗..! 하지만 난 사실.. 아마추어인걸..!"
+      },
+      {
+        "sequence": 2,
+        "timestamp": "00:02-00:03",
+        "speaker": "C",
+        "camera": "Close-up on Cheek holding phone",
+        "movement": "push in on phone screen",
+        "mood": "Encouraging solution",
+        "visual_description": "The small yellow chick with desert camo military helmet holds up a smartphone in its tiny wing. The screen shows a PWS registration form. The chick BOUNCES encouragingly. The Gamer looks at the phone with MOUTH SHUT, surprised and hopeful.",
+        "dialogue": "Peep!"
+      },
+      {
+        "sequence": 3,
+        "timestamp": "00:03-00:05",
+        "speaker": "None",
+        "camera": "Wide shot, both characters face camera",
+        "movement": "slow zoom out to reveal both",
+        "mood": "Triumphant CTA",
+        "visual_description": "The young Asian man with GAMING HEADSET and the small yellow chick with military helmet stand together facing the camera. The Gamer gives a thumbs up with a determined smile, MOUTH SHUT. The chick BOUNCES beside him holding the phone high. Golden light bathes the scene heroically.",
+        "dialogue": ""
+      }
+    ]
+  }
+}

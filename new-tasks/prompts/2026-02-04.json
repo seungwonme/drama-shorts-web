@@ -43,5 +43,80 @@
     "time": "04:25:21",
     "user": "seungwonan",
     "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01.json'\n\n현재 문제가 veo는 2초 단위로 총 2-8초 까지 생성 가능한데 지금 프롬프트 형식이 20초 내용을 전부 담고 있다는 점이야\n이렇게 프롬프트가 나오면 \n각 씬(최대 8초 단위) 1, 2, 3 ...으로 분리하는 스크립트 만들어줘\n\n동작 원리\n1. ep01.json 인자로 입력 받기\n2. product, characters는 기본적으로 입력 -> scenes를 scene으로 변경하고 해당 씬만 {}로 묶어서 json 파일로 생성\n3. 2에서 나온 N개의 파일 인자로 입력 받은 파일 이름에 맞춰서 폴더 생성하고 N개 1, 2, 3 ... 으로 순서대로 정리\n\n이해했어?"
+  },
+  {
+    "time": "04:45:29",
+    "user": "seungwonan",
+    "prompt": "# '/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/template.json' 수정건\n\n1. 캐릭터의 appearance를 좀 더 구체적으로 작성되게끔 해줘\n2. A: {action...}, B: {action...} 처럼 캐릭터별 지시를 따로 만들지 말고, visual_description이라는 필드에 한 번에 묘사 (이 때 각 캐릭터의 행동을 묘사할 때 캐릭터 필요에서 서술한 두 캐릭터 간의 큰 차이점이 있는 특징을 통해서 각 캐릭터가 제대로 상호작용하는 영상이 나오도록 해줘"
+  },
+  {
+    "time": "04:47:47",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/template.json' 이 템플릿에 맞게 '/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01.json'를 재구성해줘"
+  },
+  {
+    "time": "04:48:08",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/template.json' 이 템플릿에 맞게 '/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01.json'를 재구성해줘"
+  },
+  {
+    "time": "05:04:41",
+    "user": "seungwonan",
+    "prompt": "{\n  /* ... 위 내용 동일 ... */\n  \"timeline\": [\n    {\n      \"sequence\": 1,\n      \"timestamp\": \"00:05-00:08\",\n      \"visual_description\": \"In the middle of a destroyed urban street... (중략) ... \n      The man WITH GAMING HEADSET looks at the robot in shock. \n      IMPORTANT: The man keeps his MOUTH TIGHTLY CLOSED and DOES NOT SPEAK. He is just LISTENING. \n      The MINT-GREEN CUBE ROBOT is bobbing up and down, explaining the rules.\",\n      /* [핵심 수정]\n         1. man keeps MOUTH TIGHTLY CLOSED (입을 꽉 다물고 있음)\n         2. DOES NOT SPEAK (말하지 않음)\n         3. just LISTENING (듣기만 함) \n         이 3가지 키워드로 AI가 게이머 입을 움직이지 못하게 압박합니다. */\n      \"dialogue\": {\n        \"A\": \"(Silent, Mouth Closed)\", /* 대사 칸에도 침묵 명시 */\n        \"B\": \"치킨을 먹으면 탈출가능합니다.\"\n      }\n    }\n  ]\n}\n\n1. A/B 대사가 자꾸 겹쳐서 visual_description을 개선하려고. '/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/template.json' 템플릿에 이를 반영하게 수정해줘\n2. '/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01.json' 이 프롬프트 다시 작성"
+  },
+  {
+    "time": "05:14:37",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/PROMPT.md'\n\n이 피드백 어떻게 생각해?"
+  },
+  {
+    "time": "05:16:50",
+    "user": "seungwonan",
+    "prompt": "제안대로 해줘\n템플릿에 로봇의 특징을 적을 만큼 로봇이 항상 들어가지 않는 점은 참고해줘 "
+  },
+  {
+    "time": "05:27:58",
+    "user": "seungwonan",
+    "prompt": "아냐 내가 실행했어 \n'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/template.json' 타임라인이 시간대가 이어져 있는데 각각의 영상처럼 취급 되었으면 좋겠고\n\n우선 순위는 의미적으로 씬이 끊어지는 구간을 논리적으로 구분하여 scenes를 만드는 것도 좋으나, 각 scene들을 8초단위(마지막 영상은 짧아도됨)로 묶는 것이 더 좋을 거 같아"
+  },
+  {
+    "time": "09:13:02",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01/4.json', '/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01/5.json'\n하나의 파일로 합쳐줘 "
+  },
+  {
+    "time": "09:18:52",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/정리.md'\n이전까지 ep01.json을 만들었어\n이제 ep02.json을 만들어줘"
+  },
+  {
+    "time": "09:38:52",
+    "user": "seungwonan",
+    "prompt": "씬 1,2 3,4 5,6 합쳐줘 "
+  },
+  {
+    "time": "09:46:48",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/정리.md' 이게 원본이랑 다르네\n'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/ORIGIN.md'\n\n원본 그대로 따라가게 해줘 제발 좀"
+  },
+  {
+    "time": "09:49:22",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep01.json'도 수정해줘 "
+  },
+  {
+    "time": "09:51:15",
+    "user": "seungwonan",
+    "prompt": "'/Users/seungwonan/Dev/1-project/drama-shorts-web/new-tasks/prompts/ep02.json'\n\ndialogue_A, dialogue_B 는 갑자기 왜 생겨\n이렇게 하면 화자끼리 또 겹친다고 한 시퀀스에 말이 겹치지 않도록 해줘"
+  },
+  {
+    "time": "12:42:17",
+    "user": "seungwonan",
+    "prompt": "ep03도 만들어줘\n\n{\n  \"product\": {\n    \"name\": \"크래프톤 배틀그라운드 대회 (PWS)\",\n    \"description\": \"The official PUBG battle royale tournament.\"\n  },\n  \"characters\": [\n    {\n      \"id\": \"A\",\n      \"name\": \"Gamer\",\n      \"description\": \"Young Asian male with gaming headset. WHEN SILENT: Mouth is closed tight. WHEN SPEAKING: Mouth moves naturally.\",\n      \"voice_behavior\": \"Energetic\"\n    },\n    {\n      \"id\": \"B\",\n      \"name\": \"Robot_GPT\",\n      \"description\": \"Mint-green cube robot. It has NO MOUTH. It communicates by bouncing and vibrating its body.\",\n      \"voice_behavior\": \"Robotic tone\"\n    }\n  ],\n  \"scene\": {\n    \"scene_number\": 3,\n    \"scene_name\": \"체력 부족 + 보급품 + 엔딩\",\n    \"duration\": 8,\n    \"timeline\": [\n      {\n        \"sequence\": 1,\n        \"timestamp\": \"00:00-00:02\",\n        \"action_instruction\": \"FOCUS ON GAMER SPEAKING\",\n        \"camera\": \"Close-up on Gamer's face\",\n        \"visual_description\": \"The Gamer (A) is the ACTIVE SPEAKER. His MOUTH IS MOVING urgently as he speaks. the background is COMPLETELY STATIC and SILENT.\",\n        \"dialogue\": \"으아 근데 체력이 얼마 안남았는데.. 구급상자 필요해\",\n        \"negative_prompt\": \"robot moving, robot bouncing, gamer mouth closed\"\n      },\n      {\n        \"sequence\": 2,\n        \"timestamp\": \"00:02-00:04\",\n        \"action_instruction\": \"FOCUS ON GAMER SPEAKING\",\n        \"camera\": \"Medium shot of Gamer\",\n        \"visual_description\": \"The Gamer (A) continues SPEAKING, panting heavily. Sweat on face. His mouth moves in sync with speech. The Robot (B) remains FROZEN in the background.\",\n        \"dialogue\": \"헉헉 이제 1명만 잡으면 탈출 할 수 있어\",\n        \"negative_prompt\": \"robot moving, robot bouncing\"\n      },\n      {\n        \"sequence\": 3,\n        \"timestamp\": \"00:04-00:06\",\n        \"action_instruction\": \"ROBOT ACTS, GAMER IS SILENT\",\n        \"camera\": \"Rack focus to Robot\",\n        \"visual_description\": \"The Robot (B) becomes the ACTIVE CHARACTER. The Robot JUMPS and VIBRATES to indicate speech. Cru looks at the robot without speaking.\",\n        \"dialogue\": \"저기 보급품이 내려오는 것 같습니다.\",\n        \"negative_prompt\": \"Gamer speaking, Gamer mouth open, Gamer talking, static robot\"\n      },\n      {\n        \"sequence\": 4,\n        \"timestamp\": \"00:06-00:08\",\n        \"action_instruction\": \"BOTH SILENT, TENSION\",\n        \"camera\": \"Close-up on Gamer's eyes\",\n        \"visual_description\": \"Extreme close-up on Gamer (A). He is SILENT. His MOUTH IS SHUT. Only his eyes move, darting between the sky and the horizon. Intense breathing but NO TALKING.\",\n        \"dialogue\": \"\",\n        \"negative_prompt\": \"speaking, talking, mouth open, lips moving\"\n      }\n    ]\n  }\n} 처럼 네거티브 프롬프트는 아예 제거해줘 이게 제일 퀄리티가 좋다\n네거티브 프롬프트는 인식을 따로 하지 않고 오히려 혼동만 주나봐 "
+  },
+  {
+    "time": "12:44:05",
+    "user": "seungwonan",
+    "prompt": "네거티브 프롬프트만 없앤 거 맞지 기존의 템플릭 그대로 사용하는 거 맞아?"
   }
 ]
